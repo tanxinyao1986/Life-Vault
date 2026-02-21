@@ -60,7 +60,7 @@ struct CommunityView: View {
 
             // 金粉雨特效
             if showGoldRain {
-                GoldRainView(count: 20)
+                GoldRainView()
                     .id(goldRainId)
             }
         }
@@ -71,6 +71,7 @@ struct CommunityView: View {
     private var background: some View {
         ZStack {
             AppBackground()
+            GoldRainView().opacity(0.50)
             RadialGradient(
                 colors: [Color.sapphireBlue.opacity(0.06), .clear],
                 center: .center, startRadius: 0, endRadius: 350

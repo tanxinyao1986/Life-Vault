@@ -73,68 +73,6 @@ struct BurstParticle: Identifiable {
     }
 }
 
-// MARK: - Gold Rain (金粉飘落，用于社区点赞)
-
-struct GoldRainView: View {
-    let count: Int
-
-    @State private var drops: [RainDrop] = []
-
-    var body: some View {
-        GeometryReader { geo in
-            ZStack {
-                ForEach(drops) { drop in
-                    RainDropView(drop: drop, height: geo.size.height)
-                }
-            }
-        }
-        .ignoresSafeArea()
-        .allowsHitTesting(false)
-        .onAppear {
-            drops = RainDrop.generate(count: count)
-        }
-    }
-}
-
-struct RainDropView: View {
-    let drop: RainDrop
-    let height: CGFloat
-    @State private var fallen = false
-
-    var body: some View {
-        GoldCoinChip(diameter: drop.size)
-            .position(x: drop.x, y: fallen ? height + 20 : -20)
-            .opacity(fallen ? 0 : 0.9)
-            .rotationEffect(.degrees(fallen ? drop.rotation : 0))
-            .onAppear {
-                withAnimation(
-                    .easeIn(duration: drop.duration).delay(drop.delay)
-                ) { fallen = true }
-            }
-    }
-}
-
-struct RainDrop: Identifiable {
-    let id = UUID()
-    let x: CGFloat
-    let size: CGFloat
-    let delay: Double
-    let duration: Double
-    let rotation: Double
-
-    static func generate(count: Int) -> [RainDrop] {
-        (0..<count).map { _ in
-            RainDrop(
-                x: CGFloat.random(in: 20...340),
-                size: CGFloat.random(in: 8...18),
-                delay: Double.random(in: 0...0.8),
-                duration: Double.random(in: 0.8...1.5),
-                rotation: Double.random(in: 180...540)
-            )
-        }
-    }
-}
-
 // MARK: - Ambient Sparkles (常驻环境粒子，首页使用)
 
 struct AmbientSparkles: View {

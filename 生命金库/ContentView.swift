@@ -104,7 +104,7 @@ struct GoldenTabBar: View {
                                     colors: [.liquidGold, .liquidGoldDark],
                                     startPoint: .top, endPoint: .bottom)
                                 : LinearGradient(
-                                    colors: [Color.darkRoast.opacity(0.35)],
+                                    colors: [Color.offWhite.opacity(0.45)],
                                     startPoint: .top, endPoint: .bottom)
                         )
                         .scaleEffect(isActive ? 1.1 : 1.0)
@@ -113,7 +113,7 @@ struct GoldenTabBar: View {
 
                 Text(item.label)
                     .font(.custom("Songti SC", size: 10))
-                    .foregroundColor(isActive ? .liquidGold : .darkRoast.opacity(0.35))
+                    .foregroundColor(isActive ? .liquidGold : .offWhite.opacity(0.45))
                     .fontWeight(isActive ? .medium : .regular)
             }
             .frame(maxWidth: .infinity)

@@ -60,6 +60,15 @@ enum PouchType: String, CaseIterable, Identifiable {
         case .growth: "⊕"
         }
     }
+
+    /// SF Symbol 图标名（用于选择器等 UI）
+    var iconName: String {
+        switch self {
+        case .career: "briefcase.fill"
+        case .love:   "heart.fill"
+        case .growth: "leaf.fill"
+        }
+    }
 }
 
 // MARK: - PouchLevel
@@ -74,10 +83,10 @@ enum PouchLevel: Int, Comparable {
 
     static func level(for count: Int) -> PouchLevel {
         switch count {
-        case 0...5:   .sprout
-        case 6...15:  .accumulate
-        case 16...30: .abundant
-        default:      .overflow
+        case 0...50:   .sprout
+        case 51...100: .accumulate
+        case 101...200: .abundant
+        default:        .overflow
         }
     }
 
@@ -123,10 +132,31 @@ enum PouchLevel: Int, Comparable {
     /// 下一级所需记录数
     var nextThreshold: Int? {
         switch self {
-        case .sprout:     6
-        case .accumulate: 16
-        case .abundant:   31
+        case .sprout:     51
+        case .accumulate: 101
+        case .abundant:   201
         case .overflow:   nil
         }
+    }
+
+    /// 等级图片名（对应 Bundle 中的 01.png / 02.png / 03.png / 04.png）
+    var imageName: String { String(format: "%02d", rawValue) }
+
+    /// 上一级阈值（用于进度计算）
+    var prevThreshold: Int {
+        switch self {
+        case .sprout:     0
+        case .accumulate: 51
+        case .abundant:   101
+        case .overflow:   201
+        }
+    }
+
+    /// 升级进度 0–1
+    func progress(for count: Int) -> Double {
+        guard let next = nextThreshold else { return 1.0 }
+        let span = next - prevThreshold
+        guard span > 0 else { return 1.0 }
+        return min(Double(count - prevThreshold) / Double(span), 1.0)
     }
 }

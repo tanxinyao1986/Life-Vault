@@ -35,8 +35,8 @@ struct HomeView: View {
             // ── Deep Spotlight 背景 ───────────────────────────────
             AppBackground()
 
-            // ── 环境金粉粒子 ─────────────────────────────────────
-            AmbientSparkles().opacity(0.55)
+            // ── 全屏金币雨（从天而降）────────────────────────────
+            GoldRainView().opacity(0.50)
 
             // ── 内容 ─────────────────────────────────────────────
             ScrollView(showsIndicators: false) {
@@ -152,31 +152,30 @@ struct HomeView: View {
     }
 
     private var coinSection: some View {
-        VStack(spacing: 10) {
-            // ── 金币区域：粒子 → 光晕 → 旋转视频，全部叠合 ──
+        VStack(spacing: 12) {
+            // ── 金币区域：粒子 → 光晕 → GIF 动图，全部叠合 ──
+            // ZStack 裁剪，防止光晕溢出遮挡上下文字
             ZStack {
-                // 后层：上浮金尘粒子
-                GoldDustView()
-                    .frame(width: 300, height: 380)
+                // 中层：呼吸光晕，coinRadius=70 与 150pt 宽 GIF 中约 68pt 可见半径匹配
+                CoinHaloView(coinRadius: 70)
 
-                // 中层：呼吸金色光晕
-                CoinHaloView()
-
-                // 前层：旋转金币视频（HEVC + Alpha）
-                LoopingVideoView.coin(size: 220)
-                    .contentShape(Rectangle())    // 透明区域也可点击
+                // 前层：透明背景旋转金币 GIF
+                // 150 * (688/464) ≈ 222，保持原始宽高比
+                AnimatedGIFView(name: "coin_spin")
+                    .frame(width: 150, height: 222)
+                    .contentShape(Rectangle())
                     .onTapGesture { handleCoinTap() }
             }
-            .frame(width: 300, height: 280)
+            .frame(width: 280, height: 230)
+            .clipped()   // 严格裁剪，光晕不超出此区域
 
-            HStack(spacing: 5) {
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 12))
-                    .foregroundColor(.liquidGold.opacity(0.7))
-                Text("点击铸造今日金币")
+            HStack(spacing: 6) {
+                Text("👆")
+                    .font(.system(size: 14))
+                Text("轻触金币，铸造属于你的今日财富")
                     .font(.custom("Songti SC", size: 13))
-                    .tracking(2)
-                    .foregroundColor(.mutedGold)
+                    .tracking(1.5)
+                    .foregroundColor(.liquidGold.opacity(0.9))
             }
         }
     }
@@ -184,7 +183,7 @@ struct HomeView: View {
     private var statsRow: some View {
         HStack(spacing: 12) {
             StatPill(icon: "sun.max.fill",  label: "今日", value: "\(todayCount)枚",     color: .liquidGold)
-            StatPill(icon: "flame.fill",    label: "连续", value: "\(streakDays)天",     color: Color(hex: "FF6B35"))
+            StatPill(icon: "calendar",       label: "累计", value: "\(cumulativeDays)天", color: Color(hex: "FF6B35"))
             StatPill(icon: "star.fill",     label: "总计", value: "\(entries.count)枚",  color: Color(hex: "9B59B6"))
         }
     }
@@ -243,16 +242,11 @@ struct HomeView: View {
         entries.filter { Calendar.current.isDateInToday($0.timestamp) }.count
     }
 
-    private var streakDays: Int {
-        var streak = 0
-        var date   = Calendar.current.startOfDay(for: Date())
-        while true {
-            guard entries.contains(where: { Calendar.current.isDate($0.timestamp, inSameDayAs: date) }) else { break }
-            streak += 1
-            guard let prev = Calendar.current.date(byAdding: .day, value: -1, to: date) else { break }
-            date = prev
-        }
-        return max(streak, entries.isEmpty ? 0 : 1)
+    /// 累计铸币天数：有记录的不重复日历天数
+    private var cumulativeDays: Int {
+        let cal        = Calendar.current
+        let uniqueDays = Set(entries.map { cal.startOfDay(for: $0.timestamp) })
+        return uniqueDays.count
     }
 }
 

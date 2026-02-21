@@ -1,4 +1,61 @@
 import SwiftUI
+import UIKit
+import ImageIO
+
+// MARK: - AnimatedGIFView
+// 使用 ImageIO 解帧 + UIImageView 实现透明背景 GIF 循环播放
+
+struct AnimatedGIFView: UIViewRepresentable {
+    let name: String
+
+    func makeUIView(context: Context) -> UIImageView {
+        let imageView = UIImageView()
+        imageView.contentMode = .scaleAspectFit
+        imageView.backgroundColor = .clear
+        imageView.layer.backgroundColor = UIColor.clear.cgColor
+        // 允许 SwiftUI frame 约束覆盖图片固有尺寸
+        imageView.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        imageView.setContentHuggingPriority(.defaultLow, for: .vertical)
+        imageView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        imageView.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
+
+        // 后台线程解帧，避免主线程卡顿
+        DispatchQueue.global(qos: .userInitiated).async {
+            guard let url  = Bundle.main.url(forResource: name, withExtension: "gif"),
+                  let data = try? Data(contentsOf: url),
+                  let img  = Self.animatedImage(from: data) else { return }
+            DispatchQueue.main.async { imageView.image = img }
+        }
+
+        return imageView
+    }
+
+    func updateUIView(_ uiView: UIImageView, context: Context) {}
+
+    // MARK: Private
+
+    private static func animatedImage(from data: Data) -> UIImage? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
+        let count = CGImageSourceGetCount(source)
+        var images: [UIImage] = []
+        var totalDuration: Double = 0
+
+        for i in 0..<count {
+            guard let cgImg = CGImageSourceCreateImageAtIndex(source, i, nil) else { continue }
+            let props    = CGImageSourceCopyPropertiesAtIndex(source, i, nil) as? [String: Any]
+            let gifProps = props?[kCGImagePropertyGIFDictionary as String] as? [String: Any]
+            let delay    = (gifProps?[kCGImagePropertyGIFUnclampedDelayTime as String] as? Double)
+                        ?? (gifProps?[kCGImagePropertyGIFDelayTime as String] as? Double)
+                        ?? 0.1
+            totalDuration += max(delay, 0.02)
+            images.append(UIImage(cgImage: cgImg))
+        }
+
+        return UIImage.animatedImage(with: images, duration: totalDuration)
+    }
+}
+
+// MARK: - GoldCoinView
 
 /// 3D 旋转金币 – 主交互按钮
 /// 呼吸光效 + Y 轴倾斜 + 上下悬浮 + 流光扫过
