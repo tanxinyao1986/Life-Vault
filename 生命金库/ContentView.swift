@@ -13,6 +13,7 @@ struct ContentView: View {
                 case 0: HomeView()
                 case 1: VaultView()
                 case 2: CommunityView()
+                case 3: SettingsView()
                 default: HomeView()
                 }
             }
@@ -43,6 +44,7 @@ struct GoldenTabBar: View {
         TabItem(icon: "circle",           activeIcon: "circle.fill",         label: "每日铸币"),
         TabItem(icon: "archivebox",       activeIcon: "archivebox.fill",      label: "财富宝库"),
         TabItem(icon: "person.2",         activeIcon: "person.2.fill",        label: "能量广场"),
+        TabItem(icon: "gearshape",        activeIcon: "gearshape.fill",       label: "设置"),
     ]
 
     var body: some View {

@@ -16,14 +16,14 @@ struct PouchDetailView: View {
         let calendar = Calendar.current
         let grouped = Dictionary(grouping: entries) { entry -> String in
             let date = entry.timestamp
-            if calendar.isDateInToday(date)     { return "今天" }
+            if calendar.isDateInToday(date)     { return "财富时间轴" }
             if calendar.isDateInYesterday(date) { return "昨天" }
             let formatter = DateFormatter()
             formatter.dateFormat = "M月d日"
             return formatter.string(from: date)
         }
         return grouped.sorted { a, b in
-            let order = ["今天", "昨天"]
+            let order = ["财富时间轴", "昨天"]
             let ai = order.firstIndex(of: a.key)
             let bi = order.firstIndex(of: b.key)
             if let ai, let bi { return ai < bi }
@@ -45,7 +45,7 @@ struct PouchDetailView: View {
 
                 // 锦囊大图 + 等级
                 pouchHero
-                    .padding(.top, 8)
+                    .padding(.top, 4)
 
                 // 时间轴
                 if entries.isEmpty {
@@ -104,22 +104,23 @@ struct PouchDetailView: View {
     }
 
     private var pouchHero: some View {
-        VStack(spacing: 12) {
-            PouchCardView(type: pouchType, level: level, count: entries.count)
-                .scaleEffect(1.1)
-                .frame(height: 160)
+        VStack(spacing: 8) {
+            Image(level.imageName)
+                .resizable()
+                .scaledToFit()
+                .frame(height: 96)
 
             HStack(spacing: 16) {
                 heroStat(value: "\(entries.count)", label: "枚金币")
                 divider
-                heroStat(value: "Lv\(level.rawValue)", label: level.name)
+                heroStat(value: "Lv\(level.rawValue)", label: "财富等级")
                 if let next = level.nextThreshold {
                     divider
                     heroStat(value: "\(next - entries.count)", label: "枚升级")
                 }
             }
             .padding(.horizontal, 24)
-            .padding(.vertical, 14)
+            .padding(.vertical, 10)
             .background(
                 RoundedRectangle(cornerRadius: 16)
                     .fill(.ultraThinMaterial)
@@ -200,7 +201,7 @@ struct PouchDetailView: View {
     private func heroStat(value: String, label: String) -> some View {
         VStack(spacing: 3) {
             Text(value)
-                .font(.custom("New York", size: 20))
+                .font(.custom("New York", size: 18))
                 .fontWeight(.bold)
                 .foregroundStyle(LinearGradient.goldSheen)
             Text(label)
@@ -219,7 +220,14 @@ struct TimelineEntryCard: View {
     var onShare: () -> Void
     var onDelete: () -> Void
 
+    @State private var isExpanded = false
     @State private var showActions = false
+
+    private var dateLabel: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "M月d日"
+        return formatter.string(from: entry.timestamp)
+    }
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -243,9 +251,10 @@ struct TimelineEntryCard: View {
                     .font(.custom("Songti SC", size: 14))
                     .foregroundColor(.offWhite)
                     .lineSpacing(4)
+                    .lineLimit(isExpanded ? nil : 1)
 
                 HStack {
-                    Text(entry.timestamp.formatted(date: .omitted, time: .shortened))
+                    Text(dateLabel)
                         .font(.custom("New York", size: 11))
                         .foregroundColor(.mutedGold)
 
@@ -261,7 +270,7 @@ struct TimelineEntryCard: View {
 
                     Spacer()
 
-                    // 操作按钮
+                    // 长按后显示操作按钮
                     if showActions {
                         Button("投射", action: onShare)
                             .font(.custom("Songti SC", size: 11))
@@ -284,6 +293,9 @@ struct TimelineEntryCard: View {
                     )
             )
             .onTapGesture {
+                withAnimation(.spring(response: 0.3)) { isExpanded.toggle() }
+            }
+            .onLongPressGesture {
                 withAnimation(.spring(response: 0.3)) { showActions.toggle() }
             }
         }

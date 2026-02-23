@@ -39,28 +39,24 @@ struct HomeView: View {
             GoldRainView().opacity(0.50)
 
             // ── 内容 ─────────────────────────────────────────────
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 0) {
-                    topBar
-                        .padding(.top, 56)
-                        .padding(.horizontal, 24)
+            VStack(spacing: 0) {
+                topBar
+                    .padding(.top, 56)
+                    .padding(.horizontal, 24)
 
-                    cosmicQuoteCard
-                        .padding(.horizontal, 28)
-                        .padding(.top, 24)
+                cosmicQuoteCard
+                    .padding(.horizontal, 28)
+                    .padding(.top, 20)
 
-                    coinSection
-                        .padding(.top, 36)
+                Spacer()
 
-                    statsRow
-                        .padding(.horizontal, 20)
-                        .padding(.top, 30)
+                coinSection
 
-                    recentEntries
-                        .padding(.horizontal, 20)
-                        .padding(.top, 24)
-                        .padding(.bottom, 100)
-                }
+                Spacer()
+
+                statsRow
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 90)
             }
 
             // ── 金币爆炸特效 ─────────────────────────────────────
@@ -185,24 +181,6 @@ struct HomeView: View {
             StatPill(icon: "sun.max.fill",  label: "今日", value: "\(todayCount)枚",     color: .liquidGold)
             StatPill(icon: "calendar",       label: "累计", value: "\(cumulativeDays)天", color: Color(hex: "FF6B35"))
             StatPill(icon: "star.fill",     label: "总计", value: "\(entries.count)枚",  color: Color(hex: "9B59B6"))
-        }
-    }
-
-    @ViewBuilder private var recentEntries: some View {
-        if !entries.isEmpty {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack {
-                    Text("近期记录")
-                        .font(.custom("Songti SC", size: 15))
-                        .foregroundColor(.offWhite.opacity(0.75))
-                        .tracking(1)
-                    Spacer()
-                    Text("共\(entries.count)条")
-                        .font(.custom("Songti SC", size: 12))
-                        .foregroundColor(.mutedGold)
-                }
-                ForEach(entries.prefix(5)) { entry in EntryRowView(entry: entry) }
-            }
         }
     }
 
