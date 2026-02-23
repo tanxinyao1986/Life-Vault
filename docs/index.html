@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>生命金库 · Life Vault</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .hero {
+      text-align: center;
+      padding: 80px 24px 64px;
+    }
+    .hero .app-icon {
+      width: 100px; height: 100px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, #d4af53, #8a6020);
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 50px;
+      margin-bottom: 28px;
+      box-shadow: 0 12px 40px rgba(212,175,83,.25);
+    }
+    .hero h1 {
+      font-size: 36px; font-weight: 700;
+      background: linear-gradient(135deg, #f0d080, #d4af53);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      margin-bottom: 10px;
+    }
+    .hero .en { font-family: Georgia, serif; font-size: 14px; letter-spacing: 4px; color: var(--muted); margin-bottom: 20px; }
+    .hero .desc { font-size: 16px; color: var(--text-dim); max-width: 480px; margin: 0 auto 36px; line-height: 1.9; }
+    .btn-group { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+    .btn {
+      display: inline-block;
+      padding: 12px 28px;
+      border-radius: 50px;
+      font-size: 14px;
+      font-family: "Songti SC", serif;
+      border: 1px solid var(--border);
+      transition: all .2s;
+      text-decoration: none !important;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #d4af53, #8a6020);
+      color: #0e0c08 !important;
+      border-color: transparent;
+      font-weight: 600;
+    }
+    .btn-primary:hover { opacity: .88; }
+    .btn-secondary { background: var(--surface); color: var(--text) !important; }
+    .btn-secondary:hover { border-color: var(--gold); color: var(--gold) !important; }
+
+    .links-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 60px;
+    }
+    .link-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      text-align: center;
+      text-decoration: none !important;
+      transition: border-color .2s, transform .2s;
+      display: block;
+    }
+    .link-card:hover { border-color: var(--gold); transform: translateY(-2px); }
+    .link-card .lc-icon { font-size: 32px; margin-bottom: 12px; display: block; }
+    .link-card h3 { font-size: 16px; font-weight: 600; color: var(--text) !important; margin-bottom: 6px; }
+    .link-card p { font-size: 13px; color: var(--text-dim) !important; margin: 0; }
+
+    .divider-text {
+      text-align: center; color: var(--muted); font-size: 12px;
+      letter-spacing: 2px; margin: 48px 0 32px;
+      position: relative;
+    }
+    .divider-text::before, .divider-text::after {
+      content: "";
+      position: absolute; top: 50%;
+      width: 30%; height: 1px;
+      background: var(--border);
+    }
+    .divider-text::before { left: 0; }
+    .divider-text::after { right: 0; }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <span class="nav-brand">生命金库 · Life Vault</span>
+  <div class="nav-links">
+    <a href="privacy.html">隐私政策</a>
+    <a href="terms.html">用户协议</a>
+    <a href="support.html">技术支持</a>
+  </div>
+</nav>
+
+<div class="container" style="max-width:860px;">
+
+  <div class="hero">
+    <div class="app-icon">🪙</div>
+    <h1>生命金库</h1>
+    <div class="en">LIFE VAULT</div>
+    <p class="desc">
+      每一个让你自豪的小事，都是一枚珍贵的金币。<br>
+      积累你的生命财富，见证自己的闪光时刻。
+    </p>
+    <div class="btn-group">
+      <a href="#" class="btn btn-primary">App Store 下载</a>
+      <a href="support.html" class="btn btn-secondary">技术支持</a>
+    </div>
+  </div>
+
+  <div class="divider-text">法律文件</div>
+
+  <div class="links-grid">
+    <a href="privacy.html" class="link-card">
+      <span class="lc-icon">🔒</span>
+      <h3>隐私政策</h3>
+      <p>了解我们如何收集、使用和保护您的数据</p>
+    </a>
+    <a href="terms.html" class="link-card">
+      <span class="lc-icon">📋</span>
+      <h3>用户协议</h3>
+      <p>使用本应用须遵守的服务条款与行为规范</p>
+    </a>
+    <a href="support.html" class="link-card">
+      <span class="lc-icon">💬</span>
+      <h3>技术支持</h3>
+      <p>常见问题解答与联系方式</p>
+    </a>
+  </div>
+
+</div>
+
+<footer>
+  <div>© 2026 生命金库 Life Vault &nbsp;·&nbsp;
+    <a href="privacy.html">隐私政策</a> &nbsp;·&nbsp;
+    <a href="terms.html">用户协议</a> &nbsp;·&nbsp;
+    <a href="support.html">技术支持</a>
+  </div>
+  <div style="margin-top:6px;">本应用适用于 iOS 18.0 及以上系统 &nbsp;|&nbsp; iPhone &amp; iPad</div>
+</footer>
+
+</body>
+</html>

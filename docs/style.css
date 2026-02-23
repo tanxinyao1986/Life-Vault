@@ -1,0 +1,204 @@
+:root {
+  --bg:        #0e0c08;
+  --surface:   #1a1710;
+  --border:    rgba(212, 175, 83, 0.18);
+  --gold:      #d4af53;
+  --gold-lite: #f0d080;
+  --muted:     #8a7a50;
+  --text:      #e8e0cc;
+  --text-dim:  #a09070;
+  --red:       #c0392b;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Songti SC", "STSong", "SimSun", Georgia, serif;
+  font-size: 15px;
+  line-height: 1.8;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--gold); text-decoration: none; }
+a:hover { color: var(--gold-lite); text-decoration: underline; }
+
+/* ── 顶部导航 ── */
+.nav {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(14, 12, 8, 0.92);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  display: flex; align-items: center; gap: 32px;
+  height: 56px;
+}
+.nav-brand {
+  font-size: 16px; font-weight: 600;
+  background: linear-gradient(135deg, var(--gold-lite), var(--gold));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  white-space: nowrap;
+}
+.nav-links { display: flex; gap: 24px; flex-wrap: wrap; }
+.nav-links a {
+  font-size: 13px; color: var(--text-dim);
+  transition: color .2s;
+}
+.nav-links a:hover,
+.nav-links a.active { color: var(--gold); text-decoration: none; }
+
+/* ── 主体 ── */
+.container {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 56px 24px 100px;
+}
+
+/* ── 页面标题 ── */
+.page-header {
+  text-align: center;
+  padding: 48px 0 40px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 48px;
+}
+.page-header .icon {
+  font-size: 40px; margin-bottom: 16px; display: block;
+}
+.page-header h1 {
+  font-size: 28px; font-weight: 700;
+  background: linear-gradient(135deg, var(--gold-lite), var(--gold));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  margin-bottom: 10px;
+}
+.page-header .subtitle {
+  font-size: 13px; color: var(--text-dim); letter-spacing: 2px;
+  font-family: Georgia, serif;
+}
+.page-header .update-date {
+  margin-top: 14px; font-size: 12px; color: var(--muted);
+}
+
+/* ── 章节 ── */
+.section { margin-bottom: 40px; }
+
+.section h2 {
+  font-size: 17px; font-weight: 600;
+  color: var(--gold);
+  padding-left: 14px;
+  border-left: 3px solid var(--gold);
+  margin-bottom: 16px;
+  line-height: 1.4;
+}
+
+.section h3 {
+  font-size: 14px; font-weight: 600;
+  color: var(--text); margin: 18px 0 8px;
+}
+
+.section p {
+  color: var(--text-dim); margin-bottom: 12px;
+}
+
+.section ul, .section ol {
+  color: var(--text-dim);
+  padding-left: 20px;
+  margin-bottom: 12px;
+}
+.section li { margin-bottom: 6px; }
+
+/* ── 卡片 ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px 24px;
+  margin-bottom: 14px;
+}
+.card-icon { font-size: 24px; margin-bottom: 8px; display: block; }
+.card h3 { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+.card p  { font-size: 14px; color: var(--text-dim); margin: 0; }
+
+/* ── 徽章 ── */
+.badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-family: Georgia, serif;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  margin-right: 6px;
+}
+
+/* ── 联系框 ── */
+.contact-box {
+  background: linear-gradient(135deg, rgba(212,175,83,.08), rgba(212,175,83,.03));
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px 32px;
+  text-align: center;
+  margin-top: 32px;
+}
+.contact-box .email {
+  font-size: 18px; color: var(--gold); margin: 12px 0;
+  font-family: Georgia, serif; letter-spacing: 0.5px;
+}
+.contact-box p { color: var(--text-dim); font-size: 13px; }
+
+/* ── FAQ ── */
+.faq-item {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+.faq-q {
+  padding: 14px 18px;
+  font-size: 14px; font-weight: 600; color: var(--text);
+  background: var(--surface);
+}
+.faq-a {
+  padding: 12px 18px 16px;
+  font-size: 14px; color: var(--text-dim);
+  border-top: 1px solid var(--border);
+  background: rgba(14,12,8,.6);
+}
+
+/* ── 分隔线 ── */
+hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 36px 0;
+}
+
+/* ── 页脚 ── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 28px 24px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 2;
+}
+footer a { color: var(--muted); }
+footer a:hover { color: var(--gold); }
+
+/* ── 高亮提示 ── */
+.tip {
+  background: rgba(212,175,83,.06);
+  border-left: 3px solid var(--gold);
+  border-radius: 0 8px 8px 0;
+  padding: 12px 16px;
+  font-size: 13px; color: var(--text-dim);
+  margin: 16px 0;
+}
+
+/* ── 响应式 ── */
+@media (max-width: 600px) {
+  .container { padding: 40px 16px 80px; }
+  .page-header { padding: 32px 0 28px; }
+  .page-header h1 { font-size: 22px; }
+  .nav { padding: 0 16px; gap: 16px; }
+  .nav-links { gap: 16px; }
+}
