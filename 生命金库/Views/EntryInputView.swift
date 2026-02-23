@@ -398,6 +398,7 @@ struct EntryInputView: View {
             let entry = SuccessEntry(content: text, pouchType: selectedType.rawValue)
             entry.isSharedToCommunity = shareToCommunity
             modelContext.insert(entry)
+            WidgetDataStore.updateFromEntries(allEntries + [entry])
 
             // 选择公开时，异步上传到 Supabase 能量广场
             if shareToCommunity {

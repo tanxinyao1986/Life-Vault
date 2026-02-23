@@ -35,6 +35,7 @@ class FavoritesStore: ObservableObject {
             savedAt: Date()
         ), at: 0)
         save()
+        WidgetDataStore.updateLastFavorite(post.content)
         return true
     }
 

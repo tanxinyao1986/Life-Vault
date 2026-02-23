@@ -76,6 +76,7 @@ struct PouchDetailView: View {
             EntryEditSheet(context: ctx) { newContent, newType in
                 ctx.entry.content = newContent
                 ctx.entry.pouchType = newType.rawValue
+                WidgetDataStore.updateFromEntries(entries)
             }
         }
     }
@@ -170,6 +171,7 @@ struct PouchDetailView: View {
                             editContext = EntryEditContext(entry: entry)
                         } onDelete: {
                             modelContext.delete(entry)
+                            WidgetDataStore.updateFromEntries(entries.filter { $0.id != entry.id })
                         }
                         .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 10, trailing: 20))
                         .listRowBackground(Color.clear)

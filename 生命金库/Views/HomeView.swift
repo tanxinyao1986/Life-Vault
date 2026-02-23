@@ -78,7 +78,13 @@ struct HomeView: View {
         }
         .sheet(isPresented: $showInput) { EntryInputView() }
         .sheet(isPresented: $showPaywall) { PaywallView().environmentObject(StoreManager.shared) }
-        .onAppear { scheduleQuoteRotation() }
+        .onAppear {
+            scheduleQuoteRotation()
+            WidgetDataStore.updateFromEntries(entries)
+        }
+        .onChange(of: entries) { _, newValue in
+            WidgetDataStore.updateFromEntries(newValue)
+        }
         .onChange(of: entries.count) { _, newCount in
             if !isPro && !milestone30Shown && newCount >= 30 {
                 milestone30Shown = true
