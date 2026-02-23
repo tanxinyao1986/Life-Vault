@@ -164,6 +164,13 @@ struct PouchDetailView: View {
                     ForEach(group.value) { entry in
                         TimelineEntryCard(entry: entry, type: pouchType) {
                             entry.isSharedToCommunity = true
+                            // 同步投射到 Supabase 能量广场
+                            Task {
+                                try? await SupabaseManager.shared.sharePost(
+                                    content:   entry.content,
+                                    vaultName: pouchType.displayName
+                                )
+                            }
                         } onDelete: {
                             modelContext.delete(entry)
                         }

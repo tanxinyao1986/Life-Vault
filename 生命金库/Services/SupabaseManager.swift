@@ -1,0 +1,138 @@
+import Foundation
+import Supabase
+
+// MARK: - Remote Models
+
+struct RemotePost: Codable, Identifiable {
+    var id:         UUID
+    var userId:     UUID
+    var nickname:   String
+    var vaultName:  String
+    var content:    String
+    var likesCount: Int
+    var createdAt:  Date
+}
+
+// MARK: - Insert Payloads
+
+private struct NewPostPayload: Encodable {
+    let userId:    UUID
+    let nickname:  String
+    let vaultName: String
+    let content:   String
+}
+
+private struct LikePayload: Encodable {
+    let postId: UUID
+    let userId: UUID
+}
+
+private struct FavoritePayload: Encodable {
+    let postId: UUID
+    let userId: UUID
+}
+
+// MARK: - SupabaseManager
+
+@MainActor
+final class SupabaseManager {
+    static let shared = SupabaseManager()
+
+    let client = SupabaseClient(
+        supabaseURL: URL(string: "https://rmvcwpvjyvsyyiunsoxe.supabase.co")!,
+        supabaseKey: "sb_publishable_uq1lslc22VIac5vMoDERKQ_Buo-AKxQ"
+    )
+
+    /// 用于解码 Supabase 实时事件 record（snake_case → camelCase，ISO8601 日期）
+    let decoder: JSONDecoder = {
+        let d = JSONDecoder()
+        d.keyDecodingStrategy  = .convertFromSnakeCase
+        d.dateDecodingStrategy = .iso8601
+        return d
+    }()
+
+    var currentUserId: UUID? { client.auth.currentUser?.id }
+
+    private init() {}
+
+    // MARK: - Auth
+
+    /// App 启动时调用：有 session 则复用，没有则匿名登录
+    func signInIfNeeded() async {
+        do {
+            _ = try await client.auth.session
+        } catch {
+            do {
+                try await client.auth.signInAnonymously()
+            } catch {
+                print("[Supabase] 匿名登录失败: \(error)")
+            }
+        }
+    }
+
+    // MARK: - Posts
+
+    func fetchPosts(limit: Int = 60) async throws -> [RemotePost] {
+        try await client
+            .from("community_posts")
+            .select()
+            .order("created_at", ascending: false)
+            .limit(limit)
+            .execute()
+            .value
+    }
+
+    func sharePost(content: String, vaultName: String) async throws {
+        guard let userId = currentUserId else { return }
+        let nickname = UserDefaults.standard.string(forKey: "username") ?? "生命金库用户"
+        let payload  = NewPostPayload(
+            userId: userId, nickname: nickname,
+            vaultName: vaultName, content: content
+        )
+        try await client.from("community_posts").insert(payload).execute()
+    }
+
+    // MARK: - Likes
+
+    func fetchLikedPostIds() async throws -> Set<UUID> {
+        guard let userId = currentUserId else { return [] }
+        struct Row: Decodable { var postId: UUID }
+        let rows: [Row] = try await client
+            .from("post_likes")
+            .select("post_id")
+            .eq("user_id", value: userId)
+            .execute()
+            .value
+        return Set(rows.map { $0.postId })
+    }
+
+    func likePost(_ postId: UUID) async throws {
+        guard let userId = currentUserId else { return }
+        try await client
+            .from("post_likes")
+            .insert(LikePayload(postId: postId, userId: userId))
+            .execute()
+    }
+
+    // MARK: - Favorites
+
+    func fetchFavoritedPostIds() async throws -> Set<UUID> {
+        guard let userId = currentUserId else { return [] }
+        struct Row: Decodable { var postId: UUID }
+        let rows: [Row] = try await client
+            .from("post_favorites")
+            .select("post_id")
+            .eq("user_id", value: userId)
+            .execute()
+            .value
+        return Set(rows.map { $0.postId })
+    }
+
+    func favoritePost(_ postId: UUID) async throws {
+        guard let userId = currentUserId else { return }
+        try await client
+            .from("post_favorites")
+            .insert(FavoritePayload(postId: postId, userId: userId))
+            .execute()
+    }
+}

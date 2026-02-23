@@ -33,6 +33,10 @@ struct LifeVaultApp: App {
     var body: some Scene {
         WindowGroup {
             SplashView()
+                .task {
+                    // App 启动时完成 Supabase 匿名登录（用户无感知）
+                    await SupabaseManager.shared.signInIfNeeded()
+                }
         }
         .modelContainer(sharedModelContainer)
     }
