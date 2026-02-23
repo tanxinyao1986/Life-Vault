@@ -1,6 +1,5 @@
 import Foundation
 import Combine
-import Supabase
 
 @MainActor
 final class CommunityViewModel: ObservableObject {
@@ -12,9 +11,6 @@ final class CommunityViewModel: ObservableObject {
     @Published var errorMsg:     String?      = nil
 
     private let manager = SupabaseManager.shared
-    private var realtimeTask: Task<Void, Never>?
-
-    deinit { realtimeTask?.cancel() }
 
     // MARK: - Load
 
@@ -29,31 +25,6 @@ final class CommunityViewModel: ObservableObject {
         } catch {
             errorMsg = String(localized: "网络异常，显示示例内容")
             if posts.isEmpty { posts = RemotePost.placeholders }
-        }
-    }
-
-    // MARK: - Realtime
-
-    /// 订阅 community_posts 新插入，实时追加到列表顶部
-    func subscribeToNewPosts() {
-        realtimeTask?.cancel()
-        realtimeTask = Task { [weak self] in
-            guard let self else { return }
-            let channel = manager.client.channel("community-feed")
-            let inserts = channel.postgresChange(
-                InsertAction.self,
-                schema: "public",
-                table: "community_posts"
-            )
-            try? await channel.subscribeWithError()
-            for await insert in inserts {
-                guard !Task.isCancelled else { break }
-                if let post = self.decode(insert.record) {
-                    // 去重：自己刚发的帖子可能已在列表里
-                    guard !self.posts.contains(where: { $0.id == post.id }) else { continue }
-                    self.posts.insert(post, at: 0)
-                }
-            }
         }
     }
 
@@ -80,12 +51,7 @@ final class CommunityViewModel: ObservableObject {
         return true
     }
 
-    // MARK: - Helpers
 
-    private func decode(_ record: [String: AnyJSON]) -> RemotePost? {
-        guard let data = try? JSONEncoder().encode(record) else { return nil }
-        return try? manager.decoder.decode(RemotePost.self, from: data)
-    }
 }
 
 // MARK: - Placeholder fallback

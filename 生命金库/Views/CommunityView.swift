@@ -131,7 +131,6 @@ struct CommunityView: View {
         }
         .task {
             await viewModel.loadAll()
-            viewModel.subscribeToNewPosts()
         }
         .onReceive(NotificationCenter.default.publisher(for: .communityNeedsRefresh)) { _ in
             Task { await viewModel.loadAll() }

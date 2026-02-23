@@ -13,23 +13,40 @@ struct RemotePost: Codable, Identifiable {
     var createdAt:  Date
 }
 
-// MARK: - Insert Payloads
+// MARK: - Insert Payloads（显式 CodingKeys 确保蛇形列名匹配 Supabase）
 
 private struct NewPostPayload: Encodable {
     let userId:    UUID
     let nickname:  String
     let vaultName: String
     let content:   String
+
+    enum CodingKeys: String, CodingKey {
+        case userId    = "user_id"
+        case nickname
+        case vaultName = "vault_name"
+        case content
+    }
 }
 
 private struct LikePayload: Encodable {
     let postId: UUID
     let userId: UUID
+
+    enum CodingKeys: String, CodingKey {
+        case postId = "post_id"
+        case userId = "user_id"
+    }
 }
 
 private struct FavoritePayload: Encodable {
     let postId: UUID
     let userId: UUID
+
+    enum CodingKeys: String, CodingKey {
+        case postId = "post_id"
+        case userId = "user_id"
+    }
 }
 
 // MARK: - Notification Names
@@ -92,14 +109,25 @@ final class SupabaseManager {
     }
 
     func sharePost(content: String, vaultName: String) async throws {
-        guard let userId = currentUserId else { return }
+        // 若未登录则先尝试匿名登录一次
+        if currentUserId == nil {
+            await signInIfNeeded()
+        }
+        guard let userId = currentUserId else {
+            throw SupabaseError.notAuthenticated
+        }
         let nickname = UserDefaults.standard.string(forKey: "username")
             ?? String(localized: "生命金库用户")
-        let payload  = NewPostPayload(
+        let payload = NewPostPayload(
             userId: userId, nickname: nickname,
             vaultName: vaultName, content: content
         )
         try await client.from("community_posts").insert(payload).execute()
+    }
+
+    enum SupabaseError: LocalizedError {
+        case notAuthenticated
+        var errorDescription: String? { "用户未登录，无法发布到社区" }
     }
 
     // MARK: - Likes
