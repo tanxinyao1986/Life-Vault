@@ -56,6 +56,7 @@ struct SplashView: View {
             let fadeStart = max(videoDuration - 0.8, 0.5)
             try? await Task.sleep(for: .seconds(fadeStart))
 
+            SoundManager.shared.play(.splashEnd)
             withAnimation(.easeInOut(duration: 0.8)) {
                 splashOpacity = 0
             }

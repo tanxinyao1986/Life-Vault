@@ -14,21 +14,28 @@ struct FavoriteEntry: Codable, Identifiable {
 class FavoritesStore: ObservableObject {
     static let shared = FavoritesStore()
 
+    /// 免费用户收藏上限
+    static let freeLimit = 8
+
     @Published private(set) var entries: [FavoriteEntry] = []
     private let storageKey = "communityFavorites"
 
     init() { load() }
 
-    /// 从 RemotePost 添加收藏（Supabase 接入后使用）
-    func add(remotePost post: RemotePost) {
+    /// 从 RemotePost 添加收藏；返回 false 表示已达免费上限
+    @discardableResult
+    func add(remotePost post: RemotePost) -> Bool {
         let sid = post.id.uuidString
-        guard !isFavorited(sid) else { return }
+        guard !isFavorited(sid) else { return true }
+        let isPro = UserDefaults.standard.bool(forKey: "isPro")
+        guard isPro || entries.count < FavoritesStore.freeLimit else { return false }
         entries.insert(FavoriteEntry(
             id: sid, author: post.nickname,
             pouchName: post.vaultName, content: post.content,
             savedAt: Date()
         ), at: 0)
         save()
+        return true
     }
 
     func isFavorited(_ id: String) -> Bool { entries.contains { $0.id == id } }
@@ -52,6 +59,7 @@ struct CommunityView: View {
     @StateObject private var viewModel      = CommunityViewModel()
     @StateObject private var favoritesStore = FavoritesStore.shared
     @State private var showFavorites        = false
+    @State private var showPaywall          = false
     @Environment(\.horizontalSizeClass) private var sizeClass
 
     private var gridColumns: [GridItem] {
@@ -74,7 +82,7 @@ struct CommunityView: View {
         return formatWan(n)
     }
     private func formatWan(_ n: Int) -> String {
-        n >= 10_000 ? String(format: "%.1f万", Double(n) / 10_000) : "\(n)"
+        n >= 10_000 ? String.loc("%.1f万", Double(n) / 10_000) : "\(n)"
     }
 
     var body: some View {
@@ -108,7 +116,9 @@ struct CommunityView: View {
                                 ) {
                                     await viewModel.like(postId: post.id)
                                 } onFavorite: {
-                                    await viewModel.favorite(postId: post.id, post: post)
+                                    let ok = await viewModel.favorite(postId: post.id, post: post)
+                                    if !ok { showPaywall = true }
+                                    return ok
                                 }
                             }
                         }
@@ -123,8 +133,14 @@ struct CommunityView: View {
             await viewModel.loadAll()
             viewModel.subscribeToNewPosts()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .communityNeedsRefresh)) { _ in
+            Task { await viewModel.loadAll() }
+        }
         .sheet(isPresented: $showFavorites) {
             FavoritesView(store: favoritesStore)
+        }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView().environmentObject(StoreManager.shared)
         }
     }
 
@@ -195,7 +211,7 @@ struct CommunityCard: View {
     let isLiked:     Bool
     let isFavorited: Bool
     let onLike:      () async -> Void
-    let onFavorite:  () async -> Void
+    let onFavorite:  () async -> Bool
 
     @State private var favorited:     Bool
     @State private var favoriteCount: Int
@@ -204,18 +220,18 @@ struct CommunityCard: View {
     @State private var toastText:     String = ""
     @State private var showToast:     Bool   = false
 
-    private static let likeToasts = [
-        "世界爱着你！", "你真的太棒了！", "你的生命力在一点点长大！",
-        "丰盛正在向你涌来！", "你是宇宙的礼物！", "你的能量感染了我！",
-        "继续发光，你超厉害！", "愿你越来越好！", "满满的正能量！",
-        "你在一点点变强！", "这份勇气太珍贵了！", "宇宙看见了你的努力！",
-        "你的故事在激励着我！", "幸运总会眷顾努力的你！", "你让世界更美好了一点！",
-        "感谢你把正能量分享出来！", "你值得所有美好！", "每一步都算数！",
-        "你是自己最好的礼物！", "愿你每天都有小确幸！"
+    private static let likeToasts: [String] = [
+        String(localized: "世界爱着你！"), String(localized: "你真的太棒了！"), String(localized: "你的生命力在一点点长大！"),
+        String(localized: "丰盛正在向你涌来！"), String(localized: "你是宇宙的礼物！"), String(localized: "你的能量感染了我！"),
+        String(localized: "继续发光，你超厉害！"), String(localized: "愿你越来越好！"), String(localized: "满满的正能量！"),
+        String(localized: "你在一点点变强！"), String(localized: "这份勇气太珍贵了！"), String(localized: "宇宙看见了你的努力！"),
+        String(localized: "你的故事在激励着我！"), String(localized: "幸运总会眷顾努力的你！"), String(localized: "你让世界更美好了一点！"),
+        String(localized: "感谢你把正能量分享出来！"), String(localized: "你值得所有美好！"), String(localized: "每一步都算数！"),
+        String(localized: "你是自己最好的礼物！"), String(localized: "愿你每天都有小确幸！")
     ]
 
     init(post: RemotePost, isLiked: Bool, isFavorited: Bool,
-         onLike: @escaping () async -> Void, onFavorite: @escaping () async -> Void) {
+         onLike: @escaping () async -> Void, onFavorite: @escaping () async -> Bool) {
         self.post       = post
         self.isLiked    = isLiked
         self.isFavorited = isFavorited
@@ -280,7 +296,7 @@ struct CommunityCard: View {
 
             VStack(alignment: .leading, spacing: 1) {
                 let isMine = post.userId == SupabaseManager.shared.currentUserId
-                Text(isMine ? "我（已投射）" : post.nickname)
+                Text(isMine ? "我（全球公开）" : post.nickname)
                     .font(.custom("Songti SC", size: 13)).fontWeight(.medium).foregroundColor(.offWhite)
                 Text(post.vaultName)
                     .font(.custom("New York", size: 10)).tracking(1).foregroundColor(pouchColor.opacity(0.8))
@@ -300,8 +316,14 @@ struct CommunityCard: View {
                 favorited = true
                 favoriteCount += 1
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                showTemporaryToast("收藏为我的金库灵感")
-                Task { await onFavorite() }
+                showTemporaryToast(String(localized: "收藏为我的金库灵感"))
+                Task {
+                    let ok = await onFavorite()
+                    if !ok {
+                        favorited = false
+                        favoriteCount -= 1
+                    }
+                }
             } label: {
                 HStack(spacing: 5) {
                     Image(systemName: favorited ? "star.fill" : "star")
@@ -322,7 +344,8 @@ struct CommunityCard: View {
                 liked = true
                 likeCount += 1
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                showTemporaryToast(Self.likeToasts.randomElement() ?? "世界爱着你！")
+                SoundManager.shared.play(.like)
+                showTemporaryToast(Self.likeToasts.randomElement() ?? String(localized: "世界爱着你！"))
                 Task { await onLike() }
             } label: {
                 HStack(spacing: 5) {
@@ -398,7 +421,7 @@ struct FavoritesView: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
 
     private let df: DateFormatter = {
-        let f = DateFormatter(); f.dateFormat = "M月d日 HH:mm"; return f
+        let f = DateFormatter(); f.dateFormat = String(localized: "M月d日 HH:mm"); return f
     }()
 
     var body: some View {

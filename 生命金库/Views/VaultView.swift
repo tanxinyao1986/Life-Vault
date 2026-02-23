@@ -9,6 +9,17 @@ struct VaultView: View {
 
     @State private var selectedIndex: Int = 0
     @State private var detailPouch: PouchType? = nil
+    @State private var showPaywall = false
+
+    @AppStorage("isPro") private var isPro = false
+
+    @AppStorage("pouchName_career") private var careerName  = String(localized: "事业·财富")
+    @AppStorage("pouchName_love")   private var loveName    = String(localized: "爱·关系")
+    @AppStorage("pouchName_growth") private var growthName  = String(localized: "成长·智慧")
+
+    @AppStorage("pouchIcon_career") private var careerIcon  = "briefcase.fill"
+    @AppStorage("pouchIcon_love")   private var loveIcon    = "heart.fill"
+    @AppStorage("pouchIcon_growth") private var growthIcon  = "leaf.fill"
 
     private let pouches = PouchType.allCases
 
@@ -25,7 +36,10 @@ struct VaultView: View {
                 CoverFlowStage(
                     selectedIndex: $selectedIndex,
                     detailPouch: $detailPouch,
-                    countFor: countFor(_:)
+                    countFor: countFor(_:),
+                    nameFor: nameFor(_:),
+                    isPro: isPro,
+                    onShowPaywall: { showPaywall = true }
                 )
                 .padding(.top, 12)
 
@@ -33,14 +47,19 @@ struct VaultView: View {
 
                 CatalogNavBar(
                     selectedIndex: $selectedIndex,
-                    countFor: countFor(_:)
+                    countFor: countFor(_:),
+                    nameFor: nameFor(_:),
+                    iconFor: iconFor(_:)
                 )
                 .frame(maxWidth: sizeClass == .regular ? 600 : .infinity)
                 .padding(.bottom, 96)
             }
         }
         .sheet(item: $detailPouch) { pouch in
-            PouchDetailView(pouchType: pouch, entries: entriesFor(pouch))
+            PouchDetailView(pouchType: pouch)
+        }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView()
         }
     }
 
@@ -64,7 +83,7 @@ struct VaultView: View {
                 Image(systemName: "sparkles")
                     .font(.system(size: 10))
                     .foregroundColor(.liquidGold)
-                Text("生命资产总值：\(entries.count) 枚金币")
+                Text(String.loc("生命资产总值：%lld 枚金币", entries.count))
                     .font(.custom("Songti SC", size: 12))
                     .foregroundColor(.offWhite.opacity(0.75))
                     .tracking(0.8)
@@ -98,6 +117,22 @@ struct VaultView: View {
     private func entriesFor(_ type: PouchType) -> [SuccessEntry] {
         entries.filter { $0.pouchType == type.rawValue }
     }
+
+    private func nameFor(_ type: PouchType) -> String {
+        switch type {
+        case .career: careerName
+        case .love: loveName
+        case .growth: growthName
+        }
+    }
+
+    private func iconFor(_ type: PouchType) -> String {
+        switch type {
+        case .career: careerIcon
+        case .love: loveIcon
+        case .growth: growthIcon
+        }
+    }
 }
 
 // MARK: - CoverFlowStage
@@ -106,6 +141,9 @@ private struct CoverFlowStage: View {
     @Binding var selectedIndex: Int
     @Binding var detailPouch: PouchType?
     let countFor: (PouchType) -> Int
+    let nameFor: (PouchType) -> String
+    let isPro: Bool
+    var onShowPaywall: () -> Void
 
     @State private var dragOffset: CGFloat = 0
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -125,26 +163,32 @@ private struct CoverFlowStage: View {
                     let absDist = abs(rawDist)
                     let scale   = max(0.74, 1.0 - absDist * 0.22)
                     let opacity = max(0.38, 1.0 - absDist * 0.50)
-                    let count   = countFor(pouches[i])
-                    let level   = PouchLevel.level(for: count)
+                    let count    = countFor(pouches[i])
+                    let level    = PouchLevel.level(for: count, isPro: isPro)
+                    let lv4Lock  = PouchLevel.isLV4Locked(count: count, isPro: isPro)
 
                     PouchStageCard(
                         type: pouches[i],
                         count: count,
                         level: level,
-                        isCenter: i == selectedIndex
+                        name: nameFor(pouches[i]),
+                        isCenter: i == selectedIndex,
+                        lv4Locked: lv4Lock,
+                        onLockTap: onShowPaywall
                     )
                     .frame(width: cardW, height: cardH)
                     .scaleEffect(scale, anchor: .center)
                     .opacity(opacity)
                     .onTapGesture {
                         if i == selectedIndex {
+                            SoundManager.shared.play(.openPouchDetail)
                             detailPouch = pouches[i]
                         } else {
                             withAnimation(.spring(response: 0.40, dampingFraction: 0.80)) {
                                 selectedIndex = i
                             }
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            SoundManager.shared.play(.switchPouch)
                         }
                     }
                 }
@@ -161,10 +205,12 @@ private struct CoverFlowStage: View {
                                selectedIndex < pouches.count - 1 {
                                 selectedIndex += 1
                                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                SoundManager.shared.play(.switchPouch)
                             } else if val.predictedEndTranslation.width > threshold,
                                       selectedIndex > 0 {
                                 selectedIndex -= 1
                                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                SoundManager.shared.play(.switchPouch)
                             }
                             dragOffset = 0
                         }
@@ -181,7 +227,10 @@ private struct PouchStageCard: View {
     let type: PouchType
     let count: Int
     let level: PouchLevel
+    let name: String
     let isCenter: Bool
+    var lv4Locked: Bool = false
+    var onLockTap: () -> Void = {}
 
     @State private var glowPulse = false
 
@@ -229,17 +278,38 @@ private struct PouchStageCard: View {
             Spacer(minLength: 14)
 
             // ── 组别名称 ───────────────────────────────────────
-            Text(type.displayName)
+            Text(name)
                 .font(.custom("Songti SC", size: 19))
                 .fontWeight(.semibold)
                 .foregroundStyle(LinearGradient.goldSheen)
                 .tracking(1)
 
             // ── 金币数量 ───────────────────────────────────────
-            Text("\(count) 枚金币")
+            Text(String.loc("%lld 枚金币", count))
                 .font(.custom("New York", size: 14))
                 .foregroundColor(.offWhite.opacity(0.65))
                 .padding(.top, 5)
+
+            // ── LV4 锁定提示（免费用户 200+ 枚）──────────────
+            if lv4Locked {
+                Button(action: onLockTap) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 10))
+                        Text("解锁 LV4 · 升级 Pro")
+                            .font(.custom("Songti SC", size: 11))
+                    }
+                    .foregroundColor(.liquidGold.opacity(0.9))
+                    .padding(.horizontal, 12).padding(.vertical, 5)
+                    .background(
+                        Capsule()
+                            .fill(Color.liquidGold.opacity(0.10))
+                            .overlay(Capsule().strokeBorder(Color.liquidGold.opacity(0.45), lineWidth: 1))
+                    )
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 6)
+            }
 
             Spacer(minLength: 20)
         }
@@ -304,6 +374,8 @@ private struct CircularProgressRing: View {
 private struct CatalogNavBar: View {
     @Binding var selectedIndex: Int
     let countFor: (PouchType) -> Int
+    let nameFor: (PouchType) -> String
+    let iconFor: (PouchType) -> String
 
     private let pouches = PouchType.allCases
 
@@ -314,25 +386,30 @@ private struct CatalogNavBar: View {
                 .fill(Color.liquidGold.opacity(0.15))
                 .frame(height: 0.5)
 
-            HStack(spacing: 0) {
-                ForEach(pouches.indices, id: \.self) { i in
-                    let isSelected = i == selectedIndex
-                    let count      = countFor(pouches[i])
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 0) {
+                    ForEach(pouches.indices, id: \.self) { i in
+                        let isSelected = i == selectedIndex
+                        let count      = countFor(pouches[i])
 
-                    CatalogNavItem(
-                        type: pouches[i],
-                        count: count,
-                        isSelected: isSelected
-                    )
-                    .frame(maxWidth: .infinity)
-                    .onTapGesture {
-                        guard i != selectedIndex else { return }
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        withAnimation(.spring(response: 0.38, dampingFraction: 0.80)) {
-                            selectedIndex = i
+                        CatalogNavItem(
+                            name: nameFor(pouches[i]),
+                            iconName: iconFor(pouches[i]),
+                            count: count,
+                            isSelected: isSelected
+                        )
+                        .frame(width: 108)
+                        .onTapGesture {
+                            guard i != selectedIndex else { return }
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            withAnimation(.spring(response: 0.38, dampingFraction: 0.80)) {
+                                selectedIndex = i
+                            }
+                            SoundManager.shared.play(.switchPouch)
                         }
                     }
                 }
+                .padding(.horizontal, 8)
             }
             .padding(.top, 14)
             .padding(.bottom, 10)
@@ -344,7 +421,8 @@ private struct CatalogNavBar: View {
 // MARK: - CatalogNavItem
 
 private struct CatalogNavItem: View {
-    let type: PouchType
+    let name: String
+    let iconName: String
     let count: Int
     let isSelected: Bool
 
@@ -372,7 +450,7 @@ private struct CatalogNavItem: View {
                         )
                     )
 
-                Image(systemName: type.iconName)
+                Image(systemName: iconName)
                     .font(.system(size: 15, weight: isSelected ? .semibold : .regular))
                     .foregroundColor(
                         isSelected ? .liquidGold : Color(.systemGray2)
@@ -382,7 +460,7 @@ private struct CatalogNavItem: View {
             .animation(.spring(response: 0.28, dampingFraction: 0.70), value: isSelected)
 
             // ── 组别名称（主要文字，加大加粗）────────────────────
-            Text(type.displayName)
+            Text(name)
                 .font(.custom("Songti SC", size: 13))
                 .fontWeight(isSelected ? .semibold : .regular)
                 .foregroundColor(isSelected ? .offWhite : Color(.systemGray2))
@@ -392,7 +470,7 @@ private struct CatalogNavItem: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             // ── 金币数（次要文字）─────────────────────────────────
-            Text("\(count) 枚")
+            Text(String.loc("%lld 枚", count))
                 .font(.custom("New York", size: 10))
                 .foregroundColor(isSelected ? .liquidGold : Color(.systemGray3))
         }

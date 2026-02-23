@@ -67,7 +67,7 @@ final class LoopingPlayerUIView: UIView {
             forResource: resourceName,
             withExtension: fileExtension
         ) else {
-            print("⚠️ LoopingVideoView: '\(resourceName).\(fileExtension)' not found in bundle.")
+            print(String(localized: "⚠️ LoopingVideoView: '\(resourceName).\(fileExtension)' not found in bundle."))
             DispatchQueue.main.async { onFileNotFound() }
             return
         }

@@ -11,17 +11,17 @@ enum PouchType: String, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .career: "事业·财富"
-        case .love:   "爱·关系"
-        case .growth: "成长·智慧"
+        case .career: String(localized: "事业·财富")
+        case .love:   String(localized: "爱·关系")
+        case .growth: String(localized: "成长·智慧")
         }
     }
 
     var subtitle: String {
         switch self {
-        case .career: "Career & Wealth"
-        case .love:   "Love & Relations"
-        case .growth: "Growth & Wisdom"
+        case .career: String(localized: "Career & Wealth")
+        case .love:   String(localized: "Love & Relations")
+        case .growth: String(localized: "Growth & Wisdom")
         }
     }
 
@@ -81,21 +81,27 @@ enum PouchLevel: Int, Comparable {
 
     static func < (lhs: PouchLevel, rhs: PouchLevel) -> Bool { lhs.rawValue < rhs.rawValue }
 
-    static func level(for count: Int) -> PouchLevel {
+    /// isPro = false 时免费用户最高封顶 LV3（abundant）
+    static func level(for count: Int, isPro: Bool = false) -> PouchLevel {
         switch count {
-        case 0...50:   .sprout
-        case 51...100: .accumulate
-        case 101...200: .abundant
-        default:        .overflow
+        case 0...50:    return .sprout
+        case 51...100:  return .accumulate
+        case 101...200: return .abundant
+        default:        return isPro ? .overflow : .abundant
         }
+    }
+
+    /// 免费用户是否触达 LV4 锁定状态（count > 200 且未订阅）
+    static func isLV4Locked(count: Int, isPro: Bool) -> Bool {
+        !isPro && count > 200
     }
 
     var name: String {
         switch self {
-        case .sprout:     "萌芽"
-        case .accumulate: "积累"
-        case .abundant:   "丰盛"
-        case .overflow:   "溢出"
+        case .sprout:     String(localized: "萌芽")
+        case .accumulate: String(localized: "积累")
+        case .abundant:   String(localized: "丰盛")
+        case .overflow:   String(localized: "溢出")
         }
     }
 

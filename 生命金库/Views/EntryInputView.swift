@@ -149,7 +149,7 @@ struct EntryInputView: View {
             HStack(spacing: 3) {
                 Text("\(content.count)")
                     .foregroundColor(content.count >= maxChars ? .cinnabarRed : .liquidGold)
-                Text("/ \(maxChars)")
+                Text(String.loc("/ %lld", maxChars))
                     .foregroundColor(.mutedGold.opacity(0.6))
             }
             .font(.custom("New York", size: 12))
@@ -223,7 +223,7 @@ struct EntryInputView: View {
                     } else {
                         Image(systemName: "bag.badge.plus")
                             .font(.system(size: 18))
-                        Text("纳入囊中")
+                        Text("金币纳入囊中")
                             .font(.custom("Songti SC", size: 18))
                             .fontWeight(.semibold)
                             .tracking(2)
@@ -337,7 +337,7 @@ struct EntryInputView: View {
                     HStack(spacing: 5) {
                         Image(systemName: selectedType.iconName)
                             .font(.system(size: 11))
-                        Text("已入 · \(selectedType.displayName)")
+                        Text(String.loc("已入 · %@", selectedType.displayName))
                             .font(.custom("Songti SC", size: 13))
                             .tracking(1.5)
                     }
@@ -399,9 +399,24 @@ struct EntryInputView: View {
             entry.isSharedToCommunity = shareToCommunity
             modelContext.insert(entry)
 
+            // 选择公开时，异步上传到 Supabase 能量广场
+            if shareToCommunity {
+                let vaultName = selectedType.displayName
+                Task {
+                    do {
+                        try await SupabaseManager.shared.sharePost(content: text, vaultName: vaultName)
+                        // 通知社区页面刷新
+                        NotificationCenter.default.post(name: .communityNeedsRefresh, object: nil)
+                    } catch {
+                        print("[Share] 上传失败: \(error)")
+                    }
+                }
+            }
+
             withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
                 saving = false; showSuccess = true
             }
+            SoundManager.shared.play(.coinStoreSuccess)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { impact.impactOccurred(intensity: 0.6) }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) { impact.impactOccurred(intensity: 0.4) }
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
@@ -494,7 +509,7 @@ struct PouchOptionButton: View {
                     .fixedSize(horizontal: false, vertical: true)
 
                 // ── 已有金币数 ────────────────────────────────
-                Text("\(count) 枚")
+                Text(String.loc("%lld 枚", count))
                     .font(.custom("New York", size: 10))
                     .foregroundColor(isSelected ? type.glowColor : .mutedGold.opacity(0.40))
             }

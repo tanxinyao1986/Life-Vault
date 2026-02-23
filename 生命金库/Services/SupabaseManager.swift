@@ -32,6 +32,12 @@ private struct FavoritePayload: Encodable {
     let userId: UUID
 }
 
+// MARK: - Notification Names
+
+extension Notification.Name {
+    static let communityNeedsRefresh = Notification.Name("communityNeedsRefresh")
+}
+
 // MARK: - SupabaseManager
 
 @MainActor
@@ -40,7 +46,10 @@ final class SupabaseManager {
 
     let client = SupabaseClient(
         supabaseURL: URL(string: "https://rmvcwpvjyvsyyiunsoxe.supabase.co")!,
-        supabaseKey: "sb_publishable_uq1lslc22VIac5vMoDERKQ_Buo-AKxQ"
+        supabaseKey: "sb_publishable_uq1lslc22VIac5vMoDERKQ_Buo-AKxQ",
+        options: SupabaseClientOptions(
+            auth: .init(emitLocalSessionAsInitialSession: true)
+        )
     )
 
     /// 用于解码 Supabase 实时事件 record（snake_case → camelCase，ISO8601 日期）
@@ -65,7 +74,7 @@ final class SupabaseManager {
             do {
                 try await client.auth.signInAnonymously()
             } catch {
-                print("[Supabase] 匿名登录失败: \(error)")
+                print("[Supabase] 匿名登录失败: \(String(describing: error))")
             }
         }
     }
@@ -84,7 +93,8 @@ final class SupabaseManager {
 
     func sharePost(content: String, vaultName: String) async throws {
         guard let userId = currentUserId else { return }
-        let nickname = UserDefaults.standard.string(forKey: "username") ?? "生命金库用户"
+        let nickname = UserDefaults.standard.string(forKey: "username")
+            ?? String(localized: "生命金库用户")
         let payload  = NewPostPayload(
             userId: userId, nickname: nickname,
             vaultName: vaultName, content: content

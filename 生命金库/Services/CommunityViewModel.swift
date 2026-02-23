@@ -27,7 +27,7 @@ final class CommunityViewModel: ObservableObject {
             async let f = manager.fetchFavoritedPostIds()
             (posts, likedIds, favoritedIds) = try await (p, l, f)
         } catch {
-            errorMsg = "网络异常，显示示例内容"
+            errorMsg = String(localized: "网络异常，显示示例内容")
             if posts.isEmpty { posts = RemotePost.placeholders }
         }
     }
@@ -69,12 +69,15 @@ final class CommunityViewModel: ObservableObject {
         try? await manager.likePost(postId)
     }
 
-    func favorite(postId: UUID, post: RemotePost) async {
-        guard !favoritedIds.contains(postId) else { return }
+    @discardableResult
+    func favorite(postId: UUID, post: RemotePost) async -> Bool {
+        guard !favoritedIds.contains(postId) else { return true }
+        // 先尝试写入本地收藏（会检查免费限额）
+        let ok = FavoritesStore.shared.add(remotePost: post)
+        guard ok else { return false }
         favoritedIds.insert(postId)
         try? await manager.favoritePost(postId)
-        // 同步写入本地收藏缓存
-        FavoritesStore.shared.add(remotePost: post)
+        return true
     }
 
     // MARK: - Helpers
@@ -91,14 +94,14 @@ extension RemotePost {
     static let placeholders: [RemotePost] = {
         let now = Date()
         return [
-            RemotePost(id: UUID(), userId: UUID(), nickname: "木木",  vaultName: "事业·财富", content: "今天终于鼓起勇气给领导发了提案，被采纳了！",  likesCount: 128, createdAt: now),
-            RemotePost(id: UUID(), userId: UUID(), nickname: "晴天",  vaultName: "成长·智慧", content: "连续三十天晨间冥想打卡，感觉能量满满",         likesCount: 87,  createdAt: now),
-            RemotePost(id: UUID(), userId: UUID(), nickname: "星河",  vaultName: "爱·关系",   content: "主动和久未联系的朋友发消息，对方很开心",       likesCount: 212, createdAt: now),
-            RemotePost(id: UUID(), userId: UUID(), nickname: "阿澄",  vaultName: "成长·智慧", content: "完成了自己搁置了两年的小说第一章",             likesCount: 341, createdAt: now),
-            RemotePost(id: UUID(), userId: UUID(), nickname: "慧心",  vaultName: "爱·关系",   content: "今天没有情绪化回应，平静解决了一次冲突",       likesCount: 176, createdAt: now),
-            RemotePost(id: UUID(), userId: UUID(), nickname: "小鱼",  vaultName: "事业·财富", content: "接到了第一个外包单子，哪怕金额很小我也很骄傲",  likesCount: 409, createdAt: now),
-            RemotePost(id: UUID(), userId: UUID(), nickname: "阳光",  vaultName: "爱·关系",   content: "学会了做一道新菜，家人说很好吃",             likesCount: 93,  createdAt: now),
-            RemotePost(id: UUID(), userId: UUID(), nickname: "微风",  vaultName: "成长·智慧", content: "今天准时起床，没有赖床，给自己鼓掌",           likesCount: 267, createdAt: now),
+            RemotePost(id: UUID(), userId: UUID(), nickname: String(localized: "木木"),  vaultName: String(localized: "事业·财富"), content: String(localized: "今天终于鼓起勇气给领导发了提案，被采纳了！"),  likesCount: 128, createdAt: now),
+            RemotePost(id: UUID(), userId: UUID(), nickname: String(localized: "晴天"),  vaultName: String(localized: "成长·智慧"), content: String(localized: "连续三十天晨间冥想打卡，感觉能量满满"),         likesCount: 87,  createdAt: now),
+            RemotePost(id: UUID(), userId: UUID(), nickname: String(localized: "星河"),  vaultName: String(localized: "爱·关系"),   content: String(localized: "主动和久未联系的朋友发消息，对方很开心"),       likesCount: 212, createdAt: now),
+            RemotePost(id: UUID(), userId: UUID(), nickname: String(localized: "阿澄"),  vaultName: String(localized: "成长·智慧"), content: String(localized: "完成了自己搁置了两年的小说第一章"),             likesCount: 341, createdAt: now),
+            RemotePost(id: UUID(), userId: UUID(), nickname: String(localized: "慧心"),  vaultName: String(localized: "爱·关系"),   content: String(localized: "今天没有情绪化回应，平静解决了一次冲突"),       likesCount: 176, createdAt: now),
+            RemotePost(id: UUID(), userId: UUID(), nickname: String(localized: "小鱼"),  vaultName: String(localized: "事业·财富"), content: String(localized: "接到了第一个外包单子，哪怕金额很小我也很骄傲"),  likesCount: 409, createdAt: now),
+            RemotePost(id: UUID(), userId: UUID(), nickname: String(localized: "阳光"),  vaultName: String(localized: "爱·关系"),   content: String(localized: "学会了做一道新菜，家人说很好吃"),             likesCount: 93,  createdAt: now),
+            RemotePost(id: UUID(), userId: UUID(), nickname: String(localized: "微风"),  vaultName: String(localized: "成长·智慧"), content: String(localized: "今天准时起床，没有赖床，给自己鼓掌"),           likesCount: 267, createdAt: now),
         ]
     }()
 }

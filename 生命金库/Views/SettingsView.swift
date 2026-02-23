@@ -30,13 +30,14 @@ struct SettingsView: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
 
     // 用户信息
-    @AppStorage("username")         private var username    = "生命金库用户"
+    @AppStorage("username")         private var username    = String(localized: "生命金库用户")
     @AppStorage("isPro")            private var isPro       = false
+    @AppStorage("soundEnabled")     private var soundEnabled = true
 
     // 默认金库名称
-    @AppStorage("pouchName_career") private var careerName  = "事业·财富"
-    @AppStorage("pouchName_love")   private var loveName    = "爱·关系"
-    @AppStorage("pouchName_growth") private var growthName  = "成长·智慧"
+    @AppStorage("pouchName_career") private var careerName  = String(localized: "事业·财富")
+    @AppStorage("pouchName_love")   private var loveName    = String(localized: "爱·关系")
+    @AppStorage("pouchName_growth") private var growthName  = String(localized: "成长·智慧")
 
     // 默认金库图标
     @AppStorage("pouchIcon_career") private var careerIcon  = "briefcase.fill"
@@ -55,6 +56,14 @@ struct SettingsView: View {
     @State private var editContext:  VaultEditContext? = nil
     @State private var extraVaults:  [ExtraVault]     = []
 
+    // 法律页面
+    @State private var showPrivacy  = false
+    @State private var showTerms    = false
+    @State private var showSupport  = false
+
+    // 订阅
+    @State private var showPaywall  = false
+
     // MARK: - Body
 
     var body: some View {
@@ -66,6 +75,7 @@ struct SettingsView: View {
                 VStack(spacing: 28) {
                     pageTitle
                     profileSection
+                    soundSection
                     vaultCustomSection
                     aboutSection
                     Color.clear.frame(height: 100)
@@ -80,6 +90,10 @@ struct SettingsView: View {
                 commitEdit(target: ctx.target, name: name, icon: icon)
             }
         }
+        .sheet(isPresented: $showPrivacy)  { PrivacyView() }
+        .sheet(isPresented: $showTerms)    { TermsView() }
+        .sheet(isPresented: $showSupport)  { SupportView() }
+        .sheet(isPresented: $showPaywall)  { PaywallView().environmentObject(StoreManager.shared) }
         .onAppear(perform: loadData)
     }
 
@@ -152,6 +166,28 @@ struct SettingsView: View {
         }
     }
 
+    private var soundSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionLabel("声音")
+            SettingsCard {
+                HStack(spacing: 14) {
+                    Image(systemName: "speaker.wave.2.fill")
+                        .font(.system(size: 18))
+                        .foregroundColor(.liquidGold)
+                        .frame(width: 28)
+                    Text("声音")
+                        .font(.custom("Songti SC", size: 15))
+                        .foregroundColor(.offWhite)
+                    Spacer()
+                    Toggle("", isOn: $soundEnabled)
+                        .labelsHidden()
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+            }
+        }
+    }
+
     private var avatarCircle: some View {
         ZStack {
             Circle()
@@ -188,33 +224,38 @@ struct SettingsView: View {
     }
 
     private var memberBadge: some View {
-        HStack(spacing: 8) {
-            Image(systemName: isPro ? "crown.fill" : "person.crop.circle")
-                .font(.system(size: 13))
-                .foregroundColor(isPro ? .liquidGold : .mutedGold)
-            Text(isPro ? "订阅会员" : "免费版")
-                .font(.custom("Songti SC", size: 13))
-                .foregroundColor(isPro ? .liquidGold : .mutedGold)
-            Spacer()
-            if !isPro {
-                Text("升级会员 →")
-                    .font(.custom("Songti SC", size: 12))
-                    .foregroundColor(.liquidGold)
-                    .padding(.horizontal, 12).padding(.vertical, 5)
-                    .background(
-                        Capsule().fill(Color.liquidGold.opacity(0.12))
-                            .overlay(Capsule().strokeBorder(Color.liquidGold.opacity(0.45), lineWidth: 1))
-                    )
+        Button {
+            if !isPro { showPaywall = true }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: isPro ? "crown.fill" : "person.crop.circle")
+                    .font(.system(size: 13))
+                    .foregroundColor(isPro ? .liquidGold : .mutedGold)
+                Text(isPro ? "订阅会员" : "免费版")
+                    .font(.custom("Songti SC", size: 13))
+                    .foregroundColor(isPro ? .liquidGold : .mutedGold)
+                Spacer()
+                if !isPro {
+                    Text("升级会员 →")
+                        .font(.custom("Songti SC", size: 12))
+                        .foregroundColor(.liquidGold)
+                        .padding(.horizontal, 12).padding(.vertical, 5)
+                        .background(
+                            Capsule().fill(Color.liquidGold.opacity(0.12))
+                                .overlay(Capsule().strokeBorder(Color.liquidGold.opacity(0.45), lineWidth: 1))
+                        )
+                }
             }
+            .padding(.horizontal, 16).padding(.vertical, 11)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(isPro ? Color.liquidGold.opacity(0.08) : Color.white.opacity(0.05))
+                    .overlay(RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(isPro ? Color.liquidGold.opacity(0.35) : Color.white.opacity(0.08), lineWidth: 1))
+            )
+            .padding(.horizontal, 16)
         }
-        .padding(.horizontal, 16).padding(.vertical, 11)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(isPro ? Color.liquidGold.opacity(0.08) : Color.white.opacity(0.05))
-                .overlay(RoundedRectangle(cornerRadius: 12)
-                    .strokeBorder(isPro ? Color.liquidGold.opacity(0.35) : Color.white.opacity(0.08), lineWidth: 1))
-        )
-        .padding(.horizontal, 16)
+        .buttonStyle(.plain)
     }
 
     // MARK: - Vault Custom Section
@@ -307,6 +348,8 @@ struct SettingsView: View {
         Button {
             if isPro {
                 editContext = VaultEditContext(target: .new, initialName: "", initialIcon: "star.fill")
+            } else {
+                showPaywall = true
             }
         } label: {
             HStack(spacing: 12) {
@@ -353,11 +396,11 @@ struct SettingsView: View {
             sectionLabel("关于")
             SettingsCard {
                 VStack(spacing: 0) {
-                    linkRow(icon: "shield.lefthalf.filled",   title: "隐私政策", color: Color(hex: "5B9BD5"))
+                    linkRow(icon: "shield.lefthalf.filled",   title: "隐私政策", color: Color(hex: "5B9BD5"))  { showPrivacy = true }
                     rowDivider
-                    linkRow(icon: "questionmark.circle.fill", title: "技术支持", color: Color(hex: "FF6B35"))
+                    linkRow(icon: "questionmark.circle.fill", title: "技术支持", color: Color(hex: "FF6B35")) { showSupport = true }
                     rowDivider
-                    linkRow(icon: "doc.text.fill",            title: "用户协议", color: .mutedGold)
+                    linkRow(icon: "doc.text.fill",            title: "用户协议", color: .mutedGold)            { showTerms  = true }
                     rowDivider
                     versionRow
                 }
@@ -365,17 +408,20 @@ struct SettingsView: View {
         }
     }
 
-    private func linkRow(icon: String, title: String, color: Color) -> some View {
-        HStack(spacing: 14) {
-            Image(systemName: icon).font(.system(size: 18)).foregroundColor(color).frame(width: 28)
-            Text(title).font(.custom("Songti SC", size: 15)).foregroundColor(.offWhite)
-            Spacer()
-            Image(systemName: "chevron.right")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(.mutedGold.opacity(0.45))
+    private func linkRow(icon: String, title: String, color: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                Image(systemName: icon).font(.system(size: 18)).foregroundColor(color).frame(width: 28)
+                Text(title).font(.custom("Songti SC", size: 15)).foregroundColor(.offWhite)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.mutedGold.opacity(0.45))
+            }
+            .padding(.horizontal, 16).padding(.vertical, 14)
+            .contentShape(Rectangle())
         }
-        .padding(.horizontal, 16).padding(.vertical, 14)
-        .contentShape(Rectangle())
+        .buttonStyle(.plain)
     }
 
     private var versionRow: some View {
@@ -445,7 +491,7 @@ struct SettingsView: View {
             }
             saveExtraVaults()
         case .new:
-            let vault = ExtraVault(name: name.isEmpty ? "新金库" : name, iconName: icon)
+            let vault = ExtraVault(name: name.isEmpty ? String(localized: "新金库") : name, iconName: icon)
             extraVaults.append(vault)
             saveExtraVaults()
         }

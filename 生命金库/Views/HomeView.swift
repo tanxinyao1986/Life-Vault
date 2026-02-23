@@ -7,13 +7,17 @@ struct HomeView: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Query(sort: \SuccessEntry.timestamp, order: .reverse) private var entries: [SuccessEntry]
 
+    @AppStorage("isPro")                   private var isPro              = false
+    @AppStorage("proMilestone30Shown")     private var milestone30Shown   = false
+
     @State private var showInput    = false
     @State private var showBurst    = false
+    @State private var showPaywall  = false
     @State private var quoteIndex   = 0
     @State private var quoteVisible = true
     @State private var coinPressed  = false
 
-    private let cosmicQuotes = [
+    private let cosmicQuotes: [LocalizedStringKey] = [
         "你本身就是丰盛的源头",
         "每一个当下，都是宇宙赠予你的礼物",
         "你的能量，正在吸引你渴望的一切",
@@ -26,9 +30,15 @@ struct HomeView: View {
         "此刻的你，已是奇迹"
     ]
 
-    private var todayQuote: String {
+    private var todayQuote: LocalizedStringKey {
         let c = Calendar.current.dateComponents([.month, .day], from: Date())
         return cosmicQuotes[((c.month ?? 1) * 31 + (c.day ?? 1)) % cosmicQuotes.count]
+    }
+
+    private var todayLabel: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = String(localized: "M月d日")
+        return formatter.string(from: Date())
     }
 
     var body: some View {
@@ -67,7 +77,16 @@ struct HomeView: View {
             }
         }
         .sheet(isPresented: $showInput) { EntryInputView() }
+        .sheet(isPresented: $showPaywall) { PaywallView().environmentObject(StoreManager.shared) }
         .onAppear { scheduleQuoteRotation() }
+        .onChange(of: entries.count) { _, newCount in
+            if !isPro && !milestone30Shown && newCount >= 30 {
+                milestone30Shown = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                    showPaywall = true
+                }
+            }
+        }
     }
 
     // MARK: - Sub-views
@@ -93,10 +112,10 @@ struct HomeView: View {
                     .fill(Color.white.opacity(0.07))
                     .overlay(Capsule().strokeBorder(Color.liquidGold.opacity(0.35), lineWidth: 1))
                 HStack(spacing: 4) {
-                    Image(systemName: "sparkles")
+                    Image(systemName: "calendar")
                         .font(.system(size: 11))
                         .foregroundColor(.liquidGold)
-                    Text("\(entries.count) 枚")
+                    Text(String.loc("今日 · %@", todayLabel))
                         .font(.custom("Songti SC", size: 12))
                         .foregroundColor(.offWhite)
                 }
@@ -172,25 +191,26 @@ struct HomeView: View {
             HStack(spacing: 6) {
                 Text("👆")
                     .font(.system(size: 14))
-                Text("轻触金币，铸造属于你的今日财富")
-                    .font(.custom("Songti SC", size: 13))
-                    .tracking(1.5)
-                    .foregroundColor(.liquidGold.opacity(0.9))
+                    Text("轻触金币，铸造属于你的今日财富")
+                        .font(.custom("Songti SC", size: 13))
+                        .tracking(1.5)
+                        .foregroundColor(.liquidGold.opacity(0.9))
             }
         }
     }
 
     private var statsRow: some View {
         HStack(spacing: 12) {
-            StatPill(icon: "sun.max.fill",  label: "今日", value: "\(todayCount)枚",     color: .liquidGold)
-            StatPill(icon: "calendar",       label: "累计", value: "\(cumulativeDays)天", color: Color(hex: "FF6B35"))
-            StatPill(icon: "star.fill",     label: "总计", value: "\(entries.count)枚",  color: Color(hex: "9B59B6"))
+            StatPill(icon: "sun.max.fill",  label: "今日", value: String.loc("%lld枚", todayCount),     color: .liquidGold)
+            StatPill(icon: "calendar",       label: "累计", value: String.loc("%lld天", cumulativeDays), color: Color(hex: "FF6B35"))
+            StatPill(icon: "star.fill",     label: "总计", value: String.loc("%lld枚", entries.count),  color: Color(hex: "9B59B6"))
         }
     }
 
     // MARK: - Actions
 
     private func handleCoinTap() {
+        SoundManager.shared.play(.coinTap)
         coinPressed = true
         UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
@@ -213,11 +233,11 @@ struct HomeView: View {
 
     private var greetingText: String {
         switch Calendar.current.component(.hour, from: Date()) {
-        case 5..<12:  "早安，能量觉醒时刻"
-        case 12..<18: "午后，积累丰盛时光"
-        case 18..<20: "傍晚，回望今日高光"
-        case 20..<24: "夜晚，收拢今日光芒"
-        default:      "星夜，感恩每一刻"
+        case 5..<12:  String(localized: "早安，能量觉醒时刻")
+        case 12..<18: String(localized: "午后，积累丰盛时光")
+        case 18..<20: String(localized: "傍晚，回望今日高光")
+        case 20..<24: String(localized: "夜晚，收拢今日光芒")
+        default:      String(localized: "星夜，感恩每一刻")
         }
     }
 

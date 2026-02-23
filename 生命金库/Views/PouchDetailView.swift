@@ -5,12 +5,18 @@ import SwiftData
 /// 像翻阅账本一样回顾过去的成功日记
 struct PouchDetailView: View {
     let pouchType: PouchType
-    let entries: [SuccessEntry]
+    @Query private var entries: [SuccessEntry]
 
     @Environment(\.dismiss)       private var dismiss
     @Environment(\.modelContext)  private var modelContext
+    @AppStorage("pouchName_career") private var careerName  = String(localized: "事业·财富")
+    @AppStorage("pouchName_love")   private var loveName    = String(localized: "爱·关系")
+    @AppStorage("pouchName_growth") private var growthName  = String(localized: "成长·智慧")
+    @AppStorage("isPro") private var isPro = false
 
-    private var level: PouchLevel { PouchLevel.level(for: entries.count) }
+    @State private var editContext: EntryEditContext? = nil
+
+    private var level: PouchLevel { PouchLevel.level(for: entries.count, isPro: isPro) }
 
     private var groupedEntries: [(key: String, value: [SuccessEntry])] {
         let calendar = Calendar.current
@@ -19,7 +25,7 @@ struct PouchDetailView: View {
             if calendar.isDateInToday(date)     { return "财富时间轴" }
             if calendar.isDateInYesterday(date) { return "昨天" }
             let formatter = DateFormatter()
-            formatter.dateFormat = "M月d日"
+            formatter.dateFormat = String(localized: "M月d日")
             return formatter.string(from: date)
         }
         return grouped.sorted { a, b in
@@ -31,6 +37,16 @@ struct PouchDetailView: View {
             if bi != nil { return false }
             return a.key > b.key
         }
+    }
+
+    init(pouchType: PouchType) {
+        self.pouchType = pouchType
+        let typeRawValue = pouchType.rawValue
+        _entries = Query(
+            filter: #Predicate<SuccessEntry> { $0.pouchType == typeRawValue },
+            sort: \SuccessEntry.timestamp,
+            order: .reverse
+        )
     }
 
     var body: some View {
@@ -51,11 +67,17 @@ struct PouchDetailView: View {
                 if entries.isEmpty {
                     emptyState
                 } else {
-                    timelineScroll
+                    timelineList
                 }
             }
         }
         .presentationCornerRadius(28)
+        .sheet(item: $editContext) { ctx in
+            EntryEditSheet(context: ctx) { newContent, newType in
+                ctx.entry.content = newContent
+                ctx.entry.pouchType = newType.rawValue
+            }
+        }
     }
 
     // MARK: - Sub-views
@@ -89,7 +111,7 @@ struct PouchDetailView: View {
 
             Spacer()
 
-            Text(pouchType.displayName)
+            Text(currentPouchName)
                 .font(.custom("Songti SC", size: 17))
                 .fontWeight(.medium)
                 .foregroundColor(.offWhite)
@@ -111,12 +133,12 @@ struct PouchDetailView: View {
                 .frame(height: 96)
 
             HStack(spacing: 16) {
-                heroStat(value: "\(entries.count)", label: "枚金币")
+                heroStat(value: String(entries.count), label: "枚金币")
                 divider
-                heroStat(value: "Lv\(level.rawValue)", label: "财富等级")
+                heroStat(value: String.loc("Lv%lld", level.rawValue), label: "财富等级")
                 if let next = level.nextThreshold {
                     divider
-                    heroStat(value: "\(next - entries.count)", label: "枚升级")
+                    heroStat(value: String(next - entries.count), label: "枚升级")
                 }
             }
             .padding(.horizontal, 24)
@@ -139,11 +161,20 @@ struct PouchDetailView: View {
             .frame(width: 1, height: 28)
     }
 
-    private var timelineScroll: some View {
-        ScrollView(showsIndicators: false) {
-            LazyVStack(alignment: .leading, spacing: 0) {
-                ForEach(groupedEntries, id: \.key) { group in
-                    // 日期标题
+    private var timelineList: some View {
+        List {
+            ForEach(groupedEntries, id: \.key) { group in
+                Section {
+                    ForEach(group.value) { entry in
+                        TimelineEntryCard(entry: entry, type: pouchType) {
+                            editContext = EntryEditContext(entry: entry)
+                        } onDelete: {
+                            modelContext.delete(entry)
+                        }
+                        .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 10, trailing: 20))
+                        .listRowBackground(Color.clear)
+                    }
+                } header: {
                     HStack(spacing: 10) {
                         Rectangle()
                             .fill(LinearGradient.goldSheen)
@@ -157,32 +188,19 @@ struct PouchDetailView: View {
                             .fill(LinearGradient.goldSheen)
                             .frame(height: 1)
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 16)
-
-                    // 当天条目
-                    ForEach(group.value) { entry in
-                        TimelineEntryCard(entry: entry, type: pouchType) {
-                            entry.isSharedToCommunity = true
-                            // 同步投射到 Supabase 能量广场
-                            Task {
-                                try? await SupabaseManager.shared.sharePost(
-                                    content:   entry.content,
-                                    vaultName: pouchType.displayName
-                                )
-                            }
-                        } onDelete: {
-                            modelContext.delete(entry)
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 10)
-                    }
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 12)
                 }
-
-                Color.clear.frame(height: 100)
             }
-            .padding(.top, 8)
+
+            Color.clear
+                .frame(height: 80)
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .padding(.top, 8)
     }
 
     private var emptyState: some View {
@@ -217,6 +235,14 @@ struct PouchDetailView: View {
         }
         .frame(maxWidth: .infinity)
     }
+
+    private var currentPouchName: String {
+        switch pouchType {
+        case .career: careerName
+        case .love: loveName
+        case .growth: growthName
+        }
+    }
 }
 
 // MARK: - TimelineEntryCard
@@ -224,15 +250,14 @@ struct PouchDetailView: View {
 struct TimelineEntryCard: View {
     let entry: SuccessEntry
     let type: PouchType
-    var onShare: () -> Void
+    var onEdit: () -> Void
     var onDelete: () -> Void
 
     @State private var isExpanded = false
-    @State private var showActions = false
 
     private var dateLabel: String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "M月d日"
+        formatter.dateFormat = String(localized: "M月d日")
         return formatter.string(from: entry.timestamp)
     }
 
@@ -269,25 +294,13 @@ struct TimelineEntryCard: View {
                         HStack(spacing: 3) {
                             Image(systemName: "globe")
                                 .font(.system(size: 9))
-                            Text("已投射")
+                            Text("全球公开")
                                 .font(.custom("Songti SC", size: 10))
                         }
-                        .foregroundColor(type.primaryColor.opacity(0.7))
+                        .foregroundColor(Color.roseGold.opacity(0.85))
                     }
 
                     Spacer()
-
-                    // 长按后显示操作按钮
-                    if showActions {
-                        Button("投射", action: onShare)
-                            .font(.custom("Songti SC", size: 11))
-                            .foregroundColor(type.primaryColor)
-                        Button(role: .destructive, action: onDelete) {
-                            Image(systemName: "trash")
-                                .font(.system(size: 11))
-                        }
-                        .foregroundColor(.cinnabarRed.opacity(0.7))
-                    }
                 }
             }
             .padding(12)
@@ -302,13 +315,115 @@ struct TimelineEntryCard: View {
             .onTapGesture {
                 withAnimation(.spring(response: 0.3)) { isExpanded.toggle() }
             }
-            .onLongPressGesture {
-                withAnimation(.spring(response: 0.3)) { showActions.toggle() }
+            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                Button("修改", action: onEdit)
+                    .tint(.liquidGold)
+                Button(role: .destructive, action: onDelete) {
+                    Text("删除")
+                }
             }
         }
     }
 }
 
+// MARK: - EntryEdit
+
+private struct EntryEditContext: Identifiable {
+    var id: UUID = UUID()
+    let entry: SuccessEntry
+}
+
+private struct EntryEditSheet: View {
+    let context: EntryEditContext
+    let onSave: (String, PouchType) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var content: String
+    @State private var pouchType: PouchType
+
+    @AppStorage("pouchName_career") private var careerName  = String(localized: "事业·财富")
+    @AppStorage("pouchName_love")   private var loveName    = String(localized: "爱·关系")
+    @AppStorage("pouchName_growth") private var growthName  = String(localized: "成长·智慧")
+
+    private let maxChars = 30
+
+    init(context: EntryEditContext, onSave: @escaping (String, PouchType) -> Void) {
+        self.context = context
+        self.onSave = onSave
+        _content = State(initialValue: context.entry.content)
+        _pouchType = State(initialValue: PouchType(rawValue: context.entry.pouchType) ?? .career)
+    }
+
+    var body: some View {
+        ZStack {
+            AppBackground()
+            GoldRainView().opacity(0.35)
+
+            VStack(spacing: 16) {
+                HStack {
+                    Text("修改记录")
+                        .font(.custom("Songti SC", size: 18))
+                        .fontWeight(.semibold)
+                        .foregroundStyle(LinearGradient.goldSheen)
+                    Spacer()
+                    Button("完成") {
+                        let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
+                        guard !trimmed.isEmpty else { return }
+                        onSave(trimmed, pouchType)
+                        dismiss()
+                    }
+                    .font(.custom("Songti SC", size: 14))
+                    .foregroundColor(.liquidGold)
+                }
+
+                TextEditor(text: $content)
+                    .font(.custom("Songti SC", size: 15))
+                    .foregroundColor(.offWhite)
+                    .lineSpacing(4)
+                    .frame(minHeight: 110)
+                    .padding(10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(Color.white.opacity(0.06))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .strokeBorder(Color.liquidGold.opacity(0.35), lineWidth: 1)
+                            )
+                    )
+                    .onChange(of: content) { _, newValue in
+                        if newValue.count > maxChars {
+                            content = String(newValue.prefix(maxChars))
+                            UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                        }
+                    }
+
+                HStack {
+                    Text(String.loc("%lld/%lld", content.count, maxChars))
+                        .font(.custom("New York", size: 11))
+                        .foregroundColor(.mutedGold)
+                    Spacer()
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("归属锦囊")
+                        .font(.custom("Songti SC", size: 13))
+                        .foregroundColor(.mutedGold)
+                    Picker("归属锦囊", selection: $pouchType) {
+                        Text(careerName).tag(PouchType.career)
+                        Text(loveName).tag(PouchType.love)
+                        Text(growthName).tag(PouchType.growth)
+                    }
+                    .pickerStyle(.segmented)
+                }
+
+                Spacer()
+            }
+            .padding(20)
+        }
+        .presentationCornerRadius(24)
+    }
+}
+
 #Preview {
-    PouchDetailView(pouchType: .career, entries: [])
+    PouchDetailView(pouchType: .career)
 }
