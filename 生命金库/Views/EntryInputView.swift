@@ -407,8 +407,10 @@ struct EntryInputView: View {
                         try await SupabaseManager.shared.sharePost(content: text, vaultName: vaultName)
                         // 通知社区页面刷新
                         NotificationCenter.default.post(name: .communityNeedsRefresh, object: nil)
+                        print("[Share] 发布成功")
                     } catch {
                         print("[Share] 上传失败: \(error)")
+                        NotificationCenter.default.post(name: .communityShareFailed, object: error.localizedDescription)
                     }
                 }
             }

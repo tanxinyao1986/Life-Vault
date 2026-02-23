@@ -11,21 +11,30 @@ final class CommunityViewModel: ObservableObject {
     @Published var errorMsg:     String?      = nil
 
     private let manager = SupabaseManager.shared
+    private var lastRefreshDate: Date = .distantPast
 
     // MARK: - Load
 
     func loadAll() async {
         isLoading = true
+        lastRefreshDate = Date()
         defer { isLoading = false }
         do {
             async let p = manager.fetchPosts()
             async let l = manager.fetchLikedPostIds()
             async let f = manager.fetchFavoritedPostIds()
             (posts, likedIds, favoritedIds) = try await (p, l, f)
+            errorMsg = nil
         } catch {
             errorMsg = String(localized: "网络异常，显示示例内容")
             if posts.isEmpty { posts = RemotePost.placeholders }
         }
+    }
+
+    /// 距上次刷新超过阈值才重新拉取
+    func loadIfStale(after seconds: TimeInterval = 30) async {
+        guard Date().timeIntervalSince(lastRefreshDate) > seconds else { return }
+        await loadAll()
     }
 
     // MARK: - Actions

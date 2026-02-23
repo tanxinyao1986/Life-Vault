@@ -8,6 +8,9 @@ struct PaywallView: View {
 
     @State private var selectedPlan: Plan = .annual
     @State private var glowPulse = false
+    @State private var showPrivacy = false
+    @State private var showTerms = false
+    @State private var showSupport = false
 
     enum Plan { case monthly, annual }
 
@@ -40,6 +43,9 @@ struct PaywallView: View {
             }
         }
         .presentationCornerRadius(28)
+        .sheet(isPresented: $showPrivacy) { PrivacyView() }
+        .sheet(isPresented: $showTerms)   { TermsView() }
+        .sheet(isPresented: $showSupport) { SupportView() }
         .onAppear {
             withAnimation(.easeInOut(duration: 2.2).repeatForever(autoreverses: true)) {
                 glowPulse = true
@@ -273,11 +279,11 @@ struct PaywallView: View {
                 .multilineTextAlignment(.center)
 
             HStack(spacing: 10) {
-                Text("隐私政策").onTapGesture { }
+                Text("隐私政策").onTapGesture { showPrivacy = true }
                 Text("·").foregroundColor(.mutedGold.opacity(0.3))
-                Text("用户协议").onTapGesture { }
+                Text("用户协议").onTapGesture { showTerms = true }
                 Text("·").foregroundColor(.mutedGold.opacity(0.3))
-                Text("订阅条款").onTapGesture { }
+                Text("订阅条款").onTapGesture { showSupport = true }
             }
             .font(.custom("Songti SC", size: 11))
             .foregroundColor(.mutedGold.opacity(0.45))

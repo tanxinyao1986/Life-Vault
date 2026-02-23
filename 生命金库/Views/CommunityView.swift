@@ -60,6 +60,7 @@ struct CommunityView: View {
     @StateObject private var favoritesStore = FavoritesStore.shared
     @State private var showFavorites        = false
     @State private var showPaywall          = false
+    @State private var shareErrorMsg:       String? = nil
     @Environment(\.horizontalSizeClass) private var sizeClass
 
     private var gridColumns: [GridItem] {
@@ -126,14 +127,31 @@ struct CommunityView: View {
                         .padding(.top, 18)
                         Color.clear.frame(height: 90)
                     }
+                    .refreshable {
+                        await viewModel.loadAll()
+                    }
                 }
             }
         }
         .task {
             await viewModel.loadAll()
         }
+        .onAppear {
+            Task { await viewModel.loadIfStale() }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .communityNeedsRefresh)) { _ in
             Task { await viewModel.loadAll() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .communityShareFailed)) { note in
+            shareErrorMsg = (note.object as? String) ?? String(localized: "发布失败，请检查网络后重试")
+        }
+        .alert(String(localized: "发布到能量广场失败"), isPresented: Binding(
+            get: { shareErrorMsg != nil },
+            set: { if !$0 { shareErrorMsg = nil } }
+        )) {
+            Button(String(localized: "好"), role: .cancel) { shareErrorMsg = nil }
+        } message: {
+            Text(shareErrorMsg ?? "")
         }
         .sheet(isPresented: $showFavorites) {
             FavoritesView(store: favoritesStore)

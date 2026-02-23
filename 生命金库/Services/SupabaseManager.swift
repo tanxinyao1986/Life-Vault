@@ -11,21 +11,33 @@ struct RemotePost: Codable, Identifiable {
     var content:    String
     var likesCount: Int
     var createdAt:  Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case userId    = "user_id"
+        case nickname
+        case vaultName = "vault_name"
+        case content
+        case likesCount = "likes_count"
+        case createdAt  = "created_at"
+    }
 }
 
 // MARK: - Insert Payloads（显式 CodingKeys 确保蛇形列名匹配 Supabase）
 
 private struct NewPostPayload: Encodable {
-    let userId:    UUID
-    let nickname:  String
-    let vaultName: String
-    let content:   String
+    let userId:     UUID
+    let nickname:   String
+    let vaultName:  String
+    let content:    String
+    let likesCount: Int = 0
 
     enum CodingKeys: String, CodingKey {
         case userId    = "user_id"
         case nickname
         case vaultName = "vault_name"
         case content
+        case likesCount = "likes_count"
     }
 }
 
@@ -53,6 +65,7 @@ private struct FavoritePayload: Encodable {
 
 extension Notification.Name {
     static let communityNeedsRefresh = Notification.Name("communityNeedsRefresh")
+    static let communityShareFailed  = Notification.Name("communityShareFailed")
 }
 
 // MARK: - SupabaseManager
@@ -134,7 +147,10 @@ final class SupabaseManager {
 
     func fetchLikedPostIds() async throws -> Set<UUID> {
         guard let userId = currentUserId else { return [] }
-        struct Row: Decodable { var postId: UUID }
+        struct Row: Decodable {
+            var postId: UUID
+            enum CodingKeys: String, CodingKey { case postId = "post_id" }
+        }
         let rows: [Row] = try await client
             .from("post_likes")
             .select("post_id")
@@ -156,7 +172,10 @@ final class SupabaseManager {
 
     func fetchFavoritedPostIds() async throws -> Set<UUID> {
         guard let userId = currentUserId else { return [] }
-        struct Row: Decodable { var postId: UUID }
+        struct Row: Decodable {
+            var postId: UUID
+            enum CodingKeys: String, CodingKey { case postId = "post_id" }
+        }
         let rows: [Row] = try await client
             .from("post_favorites")
             .select("post_id")
