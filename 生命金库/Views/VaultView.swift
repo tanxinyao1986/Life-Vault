@@ -4,6 +4,7 @@ import SwiftData
 // MARK: - VaultView
 
 struct VaultView: View {
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @Query(sort: \SuccessEntry.timestamp, order: .reverse) private var entries: [SuccessEntry]
 
     @State private var selectedIndex: Int = 0
@@ -34,6 +35,7 @@ struct VaultView: View {
                     selectedIndex: $selectedIndex,
                     countFor: countFor(_:)
                 )
+                .frame(maxWidth: sizeClass == .regular ? 600 : .infinity)
                 .padding(.bottom, 96)
             }
         }
@@ -79,7 +81,8 @@ struct VaultView: View {
     /// 大面积柔光，随选中项左右移动
     private var movingSpotlight: some View {
         GeometryReader { geo in
-            let cx = geo.size.width / 2 + CGFloat(selectedIndex - 1) * (geo.size.width * 0.34)
+            let maxOffset = sizeClass == .regular ? 220.0 : geo.size.width * 0.34
+            let cx = geo.size.width / 2 + CGFloat(selectedIndex - 1) * maxOffset
             RadialGradient(
                 colors: [Color.liquidGold.opacity(0.10), .clear],
                 center: UnitPoint(x: cx / geo.size.width, y: 0.32),
@@ -105,11 +108,12 @@ private struct CoverFlowStage: View {
     let countFor: (PouchType) -> Int
 
     @State private var dragOffset: CGFloat = 0
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
-    private let pouches  = PouchType.allCases
-    private let cardW: CGFloat = 240
-    private let cardH: CGFloat = 400
-    private let spacing: CGFloat = 24
+    private let pouches = PouchType.allCases
+    private var cardW: CGFloat { sizeClass == .regular ? 300 : 240 }
+    private var cardH: CGFloat { sizeClass == .regular ? 460 : 400 }
+    private var spacing: CGFloat { sizeClass == .regular ? 32 : 24 }
 
     var body: some View {
         GeometryReader { geo in

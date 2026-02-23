@@ -1,4 +1,5 @@
 import Foundation
+import Combine
 import Supabase
 
 @MainActor
@@ -39,12 +40,12 @@ final class CommunityViewModel: ObservableObject {
         realtimeTask = Task { [weak self] in
             guard let self else { return }
             let channel = manager.client.channel("community-feed")
-            let inserts = await channel.postgresChange(
+            let inserts = channel.postgresChange(
                 InsertAction.self,
                 schema: "public",
                 table: "community_posts"
             )
-            await channel.subscribe()
+            try? await channel.subscribeWithError()
             for await insert in inserts {
                 guard !Task.isCancelled else { break }
                 if let post = self.decode(insert.record) {

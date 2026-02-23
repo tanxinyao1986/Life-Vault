@@ -5,6 +5,7 @@ import SwiftData
 struct EntryInputView: View {
     @Environment(\.modelContext)  private var modelContext
     @Environment(\.dismiss)       private var dismiss
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
     @Query(sort: \SuccessEntry.timestamp, order: .reverse)
     private var allEntries: [SuccessEntry]
@@ -13,6 +14,7 @@ struct EntryInputView: View {
     @State private var selectedType = PouchType.career
     @State private var saving       = false
     @State private var showSuccess  = false
+    @State private var shareToCommunity = false
     @FocusState private var focused: Bool
 
     private let maxChars = 30
@@ -21,6 +23,8 @@ struct EntryInputView: View {
         ZStack {
             // 背景
             AppBackground()
+                .contentShape(Rectangle())
+                .onTapGesture { focused = false }
             RadialGradient(
                 colors: [Color.liquidGold.opacity(0.08), .clear],
                 center: .top, startRadius: 0, endRadius: 280
@@ -34,12 +38,16 @@ struct EntryInputView: View {
                         headerSection
                         textInputSection
                         pouchSelector
+                        shareOptionSection
                         submitButton
                     }
                     .padding(.horizontal, 22)
+                    .frame(maxWidth: sizeClass == .regular ? 560 : .infinity)
+                    .frame(maxWidth: .infinity)
                     .padding(.top, 8)
                     .padding(.bottom, 40)
                 }
+                .scrollDismissesKeyboard(.interactively)
             }
 
             if showSuccess { successOverlay }
@@ -48,6 +56,12 @@ struct EntryInputView: View {
         .presentationDragIndicator(.hidden)
         .presentationCornerRadius(28)
         .onAppear { focused = true }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("完成") { focused = false }
+            }
+        }
     }
 
     // MARK: - Sub-views
@@ -223,6 +237,64 @@ struct EntryInputView: View {
         .animation(.easeInOut(duration: 0.2), value: content.isEmpty)
     }
 
+    // MARK: - 是否公开
+
+    private var shareOptionSection: some View {
+        Button {
+            shareToCommunity.toggle()
+            UISelectionFeedbackGenerator().selectionChanged()
+        } label: {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            shareToCommunity
+                                ? LinearGradient(colors: [.liquidGold, .liquidGoldDark],
+                                                 startPoint: .topLeading, endPoint: .bottomTrailing)
+                                : LinearGradient(colors: [Color.white.opacity(0.15)],
+                                                 startPoint: .topLeading, endPoint: .bottomTrailing)
+                        )
+                    Image(systemName: shareToCommunity ? "globe.asia.australia.fill" : "lock.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(shareToCommunity ? .white : .mutedGold)
+                }
+                .frame(width: 28, height: 28)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("可见范围")
+                        .font(.custom("Songti SC", size: 15))
+                        .foregroundColor(.offWhite)
+                    Text(shareToCommunity ? "公开到能量广场" : "仅自己可见")
+                        .font(.custom("Songti SC", size: 12))
+                        .foregroundColor(shareToCommunity ? .liquidGold : .mutedGold.opacity(0.8))
+                }
+
+                Spacer()
+
+                Image(systemName: shareToCommunity ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 18))
+                    .foregroundColor(shareToCommunity ? .liquidGold : .white.opacity(0.25))
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color.white.opacity(0.06))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .strokeBorder(
+                                shareToCommunity ? Color.liquidGold.opacity(0.6)
+                                                 : Color.white.opacity(0.08),
+                                lineWidth: 1
+                            )
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("公开到能量广场")
+        .accessibilityValue(shareToCommunity ? "已开启" : "已关闭")
+    }
+
     // MARK: - 成功覆盖层
 
     private var successOverlay: some View {
@@ -324,6 +396,7 @@ struct EntryInputView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             impact.impactOccurred(intensity: 1.0)
             let entry = SuccessEntry(content: text, pouchType: selectedType.rawValue)
+            entry.isSharedToCommunity = shareToCommunity
             modelContext.insert(entry)
 
             withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {

@@ -33,6 +33,7 @@ struct ContentView: View {
 
 struct GoldenTabBar: View {
     @Binding var selectedTab: Int
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
     private struct TabItem {
         let icon: String
@@ -54,8 +55,10 @@ struct GoldenTabBar: View {
             }
         }
         .padding(.horizontal, 8)
+        .frame(maxWidth: sizeClass == .regular ? 680 : .infinity)
         .padding(.top, 10)
         .padding(.bottom, 28)  // safe area 预留
+        .frame(maxWidth: .infinity)
         .background(
             ZStack {
                 // 磨砂底

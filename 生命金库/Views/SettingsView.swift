@@ -27,6 +27,8 @@ struct VaultEditContext: Identifiable {
 
 struct SettingsView: View {
 
+    @Environment(\.horizontalSizeClass) private var sizeClass
+
     // 用户信息
     @AppStorage("username")         private var username    = "生命金库用户"
     @AppStorage("isPro")            private var isPro       = false
@@ -69,6 +71,8 @@ struct SettingsView: View {
                     Color.clear.frame(height: 100)
                 }
                 .padding(.horizontal, 20)
+                .frame(maxWidth: sizeClass == .regular ? 680 : .infinity)
+                .frame(maxWidth: .infinity)
             }
         }
         .sheet(item: $editContext) { ctx in
@@ -495,7 +499,11 @@ struct VaultEditorSheet: View {
         "music.note",               "paintpalette.fill",        "gamecontroller.fill",      "airplane",             "globe"
     ]
 
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 5)
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    private var columns: [GridItem] {
+        let count = sizeClass == .regular ? 8 : 5
+        return Array(repeating: GridItem(.flexible(), spacing: 12), count: count)
+    }
 
     init(context: VaultEditContext, onSave: @escaping (String, String) -> Void) {
         self.context = context

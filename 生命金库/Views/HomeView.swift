@@ -4,6 +4,7 @@ import SwiftData
 /// 首页 · 每日铸币
 struct HomeView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @Query(sort: \SuccessEntry.timestamp, order: .reverse) private var entries: [SuccessEntry]
 
     @State private var showInput    = false
@@ -58,6 +59,7 @@ struct HomeView: View {
                     .padding(.horizontal, 20)
                     .padding(.bottom, 90)
             }
+            .frame(maxWidth: sizeClass == .regular ? 640 : .infinity)
 
             // ── 金币爆炸特效 ─────────────────────────────────────
             if showBurst {
@@ -153,16 +155,18 @@ struct HomeView: View {
             // ZStack 裁剪，防止光晕溢出遮挡上下文字
             ZStack {
                 // 中层：呼吸光晕，coinRadius=70 与 150pt 宽 GIF 中约 68pt 可见半径匹配
-                CoinHaloView(coinRadius: 70)
+                CoinHaloView(coinRadius: sizeClass == .regular ? 95 : 70)
 
                 // 前层：透明背景旋转金币 GIF
                 // 150 * (688/464) ≈ 222，保持原始宽高比
                 AnimatedGIFView(name: "coin_spin")
-                    .frame(width: 150, height: 222)
+                    .frame(width: sizeClass == .regular ? 200 : 150,
+                           height: sizeClass == .regular ? 296 : 222)
                     .contentShape(Rectangle())
                     .onTapGesture { handleCoinTap() }
             }
-            .frame(width: 280, height: 230)
+            .frame(width: sizeClass == .regular ? 370 : 280,
+                   height: sizeClass == .regular ? 310 : 230)
             .clipped()   // 严格裁剪，光晕不超出此区域
 
             HStack(spacing: 6) {
@@ -211,7 +215,8 @@ struct HomeView: View {
         switch Calendar.current.component(.hour, from: Date()) {
         case 5..<12:  "早安，能量觉醒时刻"
         case 12..<18: "午后，积累丰盛时光"
-        case 18..<22: "傍晚，回望今日高光"
+        case 18..<20: "傍晚，回望今日高光"
+        case 20..<24: "夜晚，收拢今日光芒"
         default:      "星夜，感恩每一刻"
         }
     }

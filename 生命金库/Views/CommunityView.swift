@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 // MARK: - FavoriteEntry & Store
 
@@ -51,6 +52,13 @@ struct CommunityView: View {
     @StateObject private var viewModel      = CommunityViewModel()
     @StateObject private var favoritesStore = FavoritesStore.shared
     @State private var showFavorites        = false
+    @Environment(\.horizontalSizeClass) private var sizeClass
+
+    private var gridColumns: [GridItem] {
+        sizeClass == .regular
+            ? [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)]
+            : [GridItem(.flexible())]
+    }
 
     // 昨日金币 / 金币共振：基于日期种子的模拟数字，每日固定
     private var yesterdayCoinValue: String {
@@ -81,6 +89,7 @@ struct CommunityView: View {
                 energyStats
                     .padding(.top, 14)
                     .padding(.horizontal, 24)
+                    .frame(maxWidth: sizeClass == .regular ? 560 : .infinity)
 
                 if viewModel.isLoading && viewModel.posts.isEmpty {
                     Spacer()
@@ -89,7 +98,7 @@ struct CommunityView: View {
                     Spacer()
                 } else {
                     ScrollView(showsIndicators: false) {
-                        LazyVStack(spacing: 14) {
+                        LazyVGrid(columns: gridColumns, spacing: 14) {
                             ForEach(viewModel.posts) { post in
                                 CommunityCard(
                                     post:        post,
@@ -102,10 +111,10 @@ struct CommunityView: View {
                                     await viewModel.favorite(postId: post.id, post: post)
                                 }
                             }
-                            Color.clear.frame(height: 90)
                         }
-                        .padding(.horizontal, 16)
+                        .padding(.horizontal, sizeClass == .regular ? 24 : 16)
                         .padding(.top, 18)
+                        Color.clear.frame(height: 90)
                     }
                 }
             }
@@ -386,6 +395,7 @@ struct EnergyStatChip: View {
 struct FavoritesView: View {
     @ObservedObject var store: FavoritesStore
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
     private let df: DateFormatter = {
         let f = DateFormatter(); f.dateFormat = "M月d日 HH:mm"; return f
@@ -427,7 +437,10 @@ struct FavoritesView: View {
                             }
                             Color.clear.frame(height: 40)
                         }
-                        .padding(.horizontal, 16).padding(.top, 4)
+                        .padding(.horizontal, 16)
+                        .frame(maxWidth: sizeClass == .regular ? 680 : .infinity)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 4)
                     }
                 }
             }
